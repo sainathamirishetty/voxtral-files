@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Meeting Minutes Generator - Enhanced</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header .version { font-size: 0.9em; opacity: 0.9; }
+        .content { padding: 30px; }
+        .section {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .form-group { margin-bottom: 15px; }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+        .radio-group input[type="radio"] {
+            width: auto;
+            cursor: pointer;
+        }
+        button {
+            padding: 12px 25px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-warning { background: #ffc107; color: #333; }
+        
+        /* Queue Status Display */
+        .queue-status {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .queue-status.visible { display: block; }
+        .queue-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .queue-stat {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .queue-stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            display: block;
+        }
+        .queue-stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        
+        .status-box {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            max-height: 250px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .status-box p { margin: 3px 0; }
+        
+        .result-item {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .result-header h3 {
+            color: #667eea;
+            margin: 0;
+        }
+        .result-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .result-content {
+            white-space: pre-wrap;
+            line-height: 1.6;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .recording-indicator {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ffc107;
+        }
+        .recording-indicator.active { display: flex; }
+        .pulse {
+            width: 12px;
+            height: 12px;
+            background: #dc3545;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        .timer {
+            font-weight: 600;
+            color: #dc3545;
+            font-size: 1.1em;
+        }
+        
+        #connectionStatus {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        /* Progress indicator */
+        .progress-indicator {
+            display: none;
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .progress-indicator.visible { display: block; }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .alert-warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            color: #856404;
+        }
+        
+        /* Job history */
+        .job-history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .job-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .job-item:hover {
+            background: #f0f0f0;
+            transform: translateX(5px);
+        }
+        .job-item.completed {
+            border-left-color: #28a745;
+        }
+        .job-item.pending {
+            border-left-color: #ffc107;
+        }
+        .job-item.error {
+            border-left-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎙️ Meeting Minutes Generator</h1>
+            <div class="version">Enhanced Multi-User Edition v2.0</div>
+        </div>
+
+        <div class="content">
+            <!-- Server Connection -->
+            <div class="section">
+                <h2>🌐 Server Connection</h2>
+                <div class="form-group">
+                    <label>Server URL:</label>
+                    <input type="text" id="serverUrl" value="http://10.144.179.83:8000">
+                </div>
+                <button class="btn-info" onclick="checkServer()">Test Connection</button>
+                <button class="btn-primary" onclick="refreshQueueStatus()">Refresh Queue Status</button>
+                <div id="connectionStatus"></div>
+                
+                <!-- Queue Status Display -->
+                <div class="queue-status" id="queueStatusDisplay">
+                    <h3 style="margin-bottom: 10px;">📊 Server Status</h3>
+                    <div class="queue-stats">
+                        <div class="queue-stat">
+                            <span class="queue-stat-value" id="queueLength">-</span>
+                            <span class="queue-stat-label">Jobs in Queue</span>
+                        </div>
+                        <div class="queue-stat">
+                            <span class="queue-stat-value" id="estimatedWait">-</span>
+                            <span class="queue-stat-label">Est. Wait (min)</span>
+                        </div>
+                        <div class="queue-stat">
+                            <span class="queue-stat-value" id="completedJobs">-</span>
+                            <span class="queue-stat-label">Completed Today</span>
+                        </div>
+                        <div class="queue-stat">
+                            <span class="queue-stat-value" id="serverLoad">-</span>
+                            <span class="queue-stat-label">Server Load</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Meeting Info -->
+            <div class="section">
+                <h2>📋 Meeting Information</h2>
+                <div class="form-group">
+                    <label>Date:</label>
+                    <input type="date" id="date">
+                </div>
+                <div class="form-group">
+                    <label>Time:</label>
+                    <input type="time" id="time">
+                </div>
+                <div class="form-group">
+                    <label>Venue:</label>
+                    <input type="text" id="venue" placeholder="Conference Room A">
+                </div>
+                <div class="form-group">
+                    <label>Agenda:</label>
+                    <input type="text" id="agenda" placeholder="Quarterly Review Meeting">
+                </div>
+                <div class="form-group">
+                    <label>Additional Context:</label>
+                    <textarea id="context" rows="3" placeholder="Any additional information..."></textarea>
+                </div>
+            </div>
+
+            <!-- Processing Mode -->
+            <div class="section">
+                <h2>⚙️ Processing Mode</h2>
+                <div class="form-group">
+                    <label>Select Mode:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="mode" value="Transcription" id="modeTranscription">
+                            Transcription
+                        </label>
+                        <label>
+                            <input type="radio" name="mode" value="Summary" id="modeSummary" checked>
+                            Summary
+                        </label>
+                        <label>
+                            <input type="radio" name="mode" value="Action Points" id="modeActionPoints">
+                            Action Points
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="summaryLengthGroup">
+                    <label>Summary Length:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="summaryLength" value="Short" id="lengthShort">
+                            Short
+                        </label>
+                        <label>
+                            <input type="radio" name="summaryLength" value="Medium" id="lengthMedium" checked>
+                            Medium
+                        </label>
+                        <label>
+                            <input type="radio" name="summaryLength" value="Long" id="lengthLong">
+                            Long
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recording Controls -->
+            <div class="section">
+                <h2>🎤 Recording Controls</h2>
+                <div class="recording-indicator" id="recIndicator">
+                    <div class="pulse"></div>
+                    <span>Recording in progress...</span>
+                    <span class="timer" id="timer">00:00:00</span>
+                </div>
+
+                <div class="button-row">
+                    <button class="btn-primary" id="startBtn" onclick="startRec()">Start Meeting</button>
+                    <button class="btn-success" id="processBtn" onclick="processAudio()" disabled>Process Audio</button>
+                    <button class="btn-warning" id="pauseBtn" onclick="pauseRec()" disabled>Pause</button>
+                    <button class="btn-danger" id="stopBtn" onclick="stopRec()" disabled>End Meeting</button>
+                </div>
+
+                <div class="button-row">
+                    <button class="btn-info" onclick="uploadFile()">Upload Audio File</button>
+                    <button class="btn-primary" onclick="genGlobalSummary()">Generate Global Summary</button>
+                    <button class="btn-success" onclick="saveResults()">Save All Results</button>
+                </div>
+
+                <input type="file" id="fileInput" accept=".wav,.webm,.mp3,.m4a,.ogg" style="display:none" onchange="handleFile(event)">
+                
+                <!-- Progress Indicator -->
+                <div class="progress-indicator" id="progressIndicator">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong id="progressTitle">Processing Job...</strong>
+                        <span id="progressPosition">Position: - / -</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                        <span id="progressMessage">Waiting in queue...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div class="section">
+                <h2>📊 Status</h2>
+                <div class="status-box" id="status"></div>
+            </div>
+            
+            <!-- Job History -->
+            <div class="section" id="jobHistorySection" style="display:none;">
+                <h2>📜 My Job History</h2>
+                <button class="btn-info" onclick="loadJobHistory()">Refresh History</button>
+                <button class="btn-warning" onclick="clearJobHistory()">Clear History</button>
+                <div class="job-history" id="jobHistory"></div>
+            </div>
+
+            <!-- Results -->
+            <div class="section" id="resultsSection" style="display:none;">
+                <h2>📄 Results</h2>
+                <div id="results"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        let isPaused = false;
+        let startTime = null;
+        let timerInterval = null;
+        let pausedTime = 0;
+        let pauseStartTime = null;
+        let serverUrl = 'http://10.144.179.83:8000';
+        let allResults = [];
+        let chunkNumber = 0;
+        let activeWebSockets = {};
+        let queueStatusInterval = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            document.getElementById('date').valueAsDate = today;
+            document.getElementById('time').value = today.toTimeString().slice(0, 5);
+
+            document.querySelectorAll('input[name="mode"]').forEach(radio => {
+                radio.addEventListener('change', handleModeChange);
+            });
+
+            handleModeChange();
+            checkServer();
+            loadJobHistory();
+            
+            // Auto-refresh queue status every 5 seconds
+            queueStatusInterval = setInterval(refreshQueueStatus, 5000);
+        });
+
+        function handleModeChange() {
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            const summaryLengthGroup = document.getElementById('summaryLengthGroup');
+            summaryLengthGroup.style.display = mode === 'Summary' ? 'block' : 'none';
+        }
+
+        async function checkServer() {
+            serverUrl = document.getElementById('serverUrl').value;
+            log('Checking server connection...');
+
+            try {
+                const response = await fetch(`${serverUrl}/health`);
+                const data = await response.json();
+
+                const statusDiv = document.getElementById('connectionStatus');
+                if (data.status === 'healthy' && data.model_loaded) {
+                    statusDiv.innerHTML = '<span style="color:green;">✓ Server connected and model loaded!</span>';
+                    statusDiv.style.background = '#d4edda';
+                    log('✓ Server connected and ready');
+                    
+                    // Show queue status
+                    refreshQueueStatus();
+                } else {
+                    statusDiv.innerHTML = '<span style="color:orange;">⚠ Server connected but model not ready</span>';
+                    statusDiv.style.background = '#fff3cd';
+                    log('⚠ Server connected but model loading');
+                }
+            } catch (error) {
+                const statusDiv = document.getElementById('connectionStatus');
+                statusDiv.innerHTML = '<span style="color:red;">✗ Cannot connect to server</span>';
+                statusDiv.style.background = '#f8d7da';
+                log('✗ Cannot connect: ' + error.message);
+            }
+        }
+
+        async function refreshQueueStatus() {
+            try {
+                const response = await fetch(`${serverUrl}/queue_status`);
+                const data = await response.json();
+                
+                document.getElementById('queueLength').textContent = data.queue_length;
+                document.getElementById('estimatedWait').textContent = data.estimated_wait_minutes;
+                document.getElementById('completedJobs').textContent = data.completed_jobs;
+                document.getElementById('serverLoad').textContent = data.server_load.toUpperCase();
+                
+                // Color code server load
+                const loadElement = document.getElementById('serverLoad');
+                loadElement.style.color = data.server_load === 'high' ? '#dc3545' : 
+                                          data.server_load === 'medium' ? '#ffc107' : '#28a745';
+                
+                document.getElementById('queueStatusDisplay').classList.add('visible');
+            } catch (error) {
+                console.error('Failed to get queue status:', error);
+            }
+        }
+
+        async function startRec() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 16000
+                    }
+                });
+
+                let options = { mimeType: 'audio/webm' };
+                if (MediaRecorder.isTypeSupported('audio/wav')) {
+                    options = { mimeType: 'audio/wav' };
+                } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                    options = { mimeType: 'audio/webm;codecs=opus' };
+                }
+
+                mediaRecorder = new MediaRecorder(stream, options);
+                log(`Recording with format: ${mediaRecorder.mimeType}`);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0 && !isPaused) {
+                        audioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.start(1000);
+                isRecording = true;
+                isPaused = false;
+                startTime = Date.now();
+                pausedTime = 0;
+                chunkNumber = 0;
+                startTimer();
+
+                document.getElementById('recIndicator').classList.add('active');
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('processBtn').disabled = false;
+                document.getElementById('pauseBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = false;
+
+                log('✓ Recording started - Select mode and click "Process Audio" when ready');
+            } catch (error) {
+                log('✗ Error starting recording: ' + error.message);
+                alert('Error accessing microphone: ' + error.message);
+            }
+        }
+
+        function pauseRec() {
+            if (isPaused) {
+                if (mediaRecorder && mediaRecorder.state === 'paused') {
+                    mediaRecorder.resume();
+                }
+                isPaused = false;
+                if (pauseStartTime) {
+                    pausedTime += (Date.now() - pauseStartTime);
+                    pauseStartTime = null;
+                }
+                document.getElementById('pauseBtn').textContent = 'Pause';
+                log('✓ Recording resumed');
+            } else {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.pause();
+                }
+                isPaused = true;
+                pauseStartTime = Date.now();
+                document.getElementById('pauseBtn').textContent = 'Resume';
+                log('⏸ Recording paused');
+            }
+        }
+
+        async function processAudio() {
+            if (audioChunks.length === 0) {
+                log('⚠ No audio to process');
+                alert('No audio recorded yet. Please wait a moment after starting recording.');
+                return;
+            }
+
+            // Check queue status first
+            const queueResponse = await fetch(`${serverUrl}/queue_status`);
+            const queueData = await queueResponse.json();
+            
+            if (queueData.queue_length > 10) {
+                const proceed = confirm(
+                    `⚠️ Server is busy!\n\n` +
+                    `Jobs in queue: ${queueData.queue_length}\n` +
+                    `Estimated wait: ${queueData.estimated_wait_minutes} minutes\n\n` +
+                    `Do you want to continue?`
+                );
+                if (!proceed) {
+                    log('❌ Processing cancelled by user');
+                    return;
+                }
+            }
+
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            const summaryLength = document.querySelector('input[name="summaryLength"]:checked')?.value || 'Medium';
+
+            if (!mode) {
+                log('⚠ Please select a processing mode');
+                alert('Please select a processing mode first');
+                return;
+            }
+
+            chunkNumber++;
+            log(`📤 Creating audio chunk #${chunkNumber} with mode: ${mode}`);
+
+            const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+            audioChunks = [];
+
+            if (!audioBlob.type.includes('wav')) {
+                log('🔄 Converting audio to WAV format...');
+                try {
+                    const wavBlob = await convertToWav(audioBlob);
+                    await sendAudioToServer(wavBlob, mode, summaryLength, chunkNumber);
+                } catch (error) {
+                    log('✗ Conversion failed: ' + error.message);
+                    alert('Audio conversion failed: ' + error.message);
+                }
+            } else {
+                await sendAudioToServer(audioBlob, mode, summaryLength, chunkNumber);
+            }
+        }
+
+        async function stopRec() {
+            if (!mediaRecorder) return;
+
+            log('🛑 Stopping recording...');
+
+            if (audioChunks.length > 0) {
+                const mode = document.querySelector('input[name="mode"]:checked').value;
+                const summaryLength = document.querySelector('input[name="summaryLength"]:checked')?.value || 'Medium';
+
+                if (mode) {
+                    chunkNumber++;
+                    log(`📤 Processing final chunk #${chunkNumber}`);
+                    const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+
+                    if (!audioBlob.type.includes('wav')) {
+                        log('🔄 Converting audio to WAV format...');
+                        try {
+                            const wavBlob = await convertToWav(audioBlob);
+                            await sendAudioToServer(wavBlob, mode, summaryLength, chunkNumber);
+                        } catch (error) {
+                            log('✗ Conversion failed: ' + error.message);
+                        }
+                    } else {
+                        await sendAudioToServer(audioBlob, mode, summaryLength, chunkNumber);
+                    }
+                }
+            }
+
+            mediaRecorder.stop();
+            isRecording = false;
+            stopTimer();
+
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+
+            document.getElementById('recIndicator').classList.remove('active');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('processBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('pauseBtn').textContent = 'Pause';
+
+            audioChunks = [];
+
+            log('✓ Recording stopped');
+        }
+
+        function uploadFile() {
+            document.getElementById('fileInput').click();
+        }
+
+        async function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            const summaryLength = document.querySelector('input[name="summaryLength"]:checked')?.value || 'Medium';
+
+            if (!mode) {
+                log('⚠ Please select a processing mode first');
+                alert('Please select a processing mode first');
+                event.target.value = '';
+                return;
+            }
+
+            log(`📤 Uploading file: ${file.name} with mode: ${mode}`);
+            await sendAudioToServer(file, mode, summaryLength, 0);
+
+            event.target.value = '';
+        }
+
+        async function sendAudioToServer(audioBlob, mode, summaryLength, chunkNum) {
+            const formData = new FormData();
+
+            const filename = chunkNum > 0
+                ? `chunk_${chunkNum}_${Date.now()}.wav`
+                : `upload_${Date.now()}.wav`;
+
+            formData.append('file', audioBlob, filename);
+            formData.append('mode', mode);
+            if (mode === 'Summary') {
+                formData.append('summary_length', summaryLength);
+            }
+
+            try {
+                log(`⏳ Uploading to server... (Mode: ${mode}${mode === 'Summary' ? `, Length: ${summaryLength}` : ''})`);
+
+                const response = await fetch(`${serverUrl}/process_audio`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Server request failed');
+                }
+
+                const data = await response.json();
+                log(`✓ Job created: ${data.job_id.substring(0, 8)}... (${data.mode})`);
+                log(`📊 Queue position: ${data.queue_position} | Est. wait: ${data.estimated_wait_minutes} min`);
+
+                // Save to job history
+                saveJobToHistory(data.job_id, mode, data.queue_position, data.estimated_wait_minutes);
+
+                // Show progress indicator
+                showProgressIndicator(data.job_id, mode, data.queue_position);
+
+                // Use WebSocket for real-time updates
+                connectWebSocket(data.job_id);
+
+            } catch (error) {
+                log('✗ Error sending audio: ' + error.message);
+                alert('Error uploading audio: ' + error.message);
+            }
+        }
+
+        function connectWebSocket(jobId) {
+            const wsUrl = serverUrl.replace('http', 'ws') + `/ws/${jobId}`;
+            log(`🔌 Connecting WebSocket for job ${jobId.substring(0, 8)}...`);
+
+            try {
+                const ws = new WebSocket(wsUrl);
+                activeWebSockets[jobId] = ws;
+
+                ws.onopen = () => {
+                    log(`✓ WebSocket connected for job ${jobId.substring(0, 8)}`);
+                };
+
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketUpdate(jobId, data);
+                };
+
+                ws.onerror = (error) => {
+                    log(`⚠ WebSocket error, falling back to polling...`);
+                    ws.close();
+                    delete activeWebSockets[jobId];
+                    pollJobStatus(jobId);
+                };
+
+                ws.onclose = () => {
+                    log(`🔌 WebSocket closed for job ${jobId.substring(0, 8)}`);
+                    delete activeWebSockets[jobId];
+                };
+
+            } catch (error) {
+                log(`✗ WebSocket connection failed, using polling instead`);
+                pollJobStatus(jobId);
+            }
+        }
+
+        function handleWebSocketUpdate(jobId, data) {
+            updateProgressIndicator(jobId, data);
+
+            if (data.status === 'completed') {
+                log(`✓ Job ${jobId.substring(0, 8)}... completed via WebSocket!`);
+                hideProgressIndicator();
+                displayResult(data);
+                
+                if (activeWebSockets[jobId]) {
+                    activeWebSockets[jobId].close();
+                    delete activeWebSockets[jobId];
+                }
+                
+                updateJobHistory(jobId, 'completed');
+            } else if (data.status === 'error') {
+                log(`✗ Job ${jobId.substring(0, 8)}... failed: ${data.error}`);
+                hideProgressIndicator();
+                alert('Processing failed: ' + data.error);
+                
+                if (activeWebSockets[jobId]) {
+                    activeWebSockets[jobId].close();
+                    delete activeWebSockets[jobId];
+                }
+                
+                updateJobHistory(jobId, 'error');
+            }
+        }
+
+        async function pollJobStatus(jobId) {
+            const maxAttempts = 1800; // 30 minutes max
+            let attempts = 0;
+            let completed = false;
+
+            const pollInterval = setInterval(async () => {
+                if (completed) return;
+
+                attempts++;
+
+                try {
+                    const response = await fetch(`${serverUrl}/job_status/${jobId}`);
+
+                    if (!response.ok) {
+                        throw new Error('Failed to get job status');
+                    }
+
+                    const data = await response.json();
+
+                    if (completed) return;
+
+                    updateProgressIndicator(jobId, data);
+
+                    if (data.status === 'completed') {
+                        completed = true;
+                        clearInterval(pollInterval);
+                        log(`✓ Job ${jobId.substring(0, 8)}... completed!`);
+                        hideProgressIndicator();
+                        displayResult(data);
+                        updateJobHistory(jobId, 'completed');
+                    } else if (data.status === 'error') {
+                        completed = true;
+                        clearInterval(pollInterval);
+                        log(`✗ Job ${jobId.substring(0, 8)}... failed: ${data.error}`);
+                        hideProgressIndicator();
+                        alert('Processing failed: ' + data.error);
+                        updateJobHistory(jobId, 'error');
+                    } else if (attempts >= maxAttempts) {
+                        completed = true;
+                        clearInterval(pollInterval);
+                        log(`⏱ Job ${jobId.substring(0, 8)}... timed out`);
+                        hideProgressIndicator();
+                        
+                        const retry = confirm(
+                            'Processing is taking longer than expected.\n\n' +
+                            `Job ID: ${jobId}\n\n` +
+                            'Save this ID to check later, or click OK to keep waiting.'
+                        );
+                        
+                        if (retry) {
+                            pollJobStatus(jobId);
+                        } else {
+                            alert(`Your job is still processing.\nJob ID: ${jobId}\n\nUse "Check Old Job" to retrieve results later.`);
+                        }
+                    } else if (attempts % 10 === 0) {
+                        log(`⏳ Processing... (${attempts}s)`);
+                    }
+                } catch (error) {
+                    if (!completed) {
+                        completed = true;
+                        clearInterval(pollInterval);
+                        log('✗ Error polling job status: ' + error.message);
+                        hideProgressIndicator();
+                    }
+                }
+            }, 1000);
+        }
+
+        function showProgressIndicator(jobId, mode, queuePosition) {
+            const indicator = document.getElementById('progressIndicator');
+            document.getElementById('progressTitle').textContent = `Processing: ${mode}`;
+            document.getElementById('progressPosition').textContent = `Position: ${queuePosition}`;
+            document.getElementById('progressMessage').textContent = 'Waiting in queue...';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressFill').textContent = '0%';
+            indicator.classList.add('visible');
+        }
+
+        function updateProgressIndicator(jobId, data) {
+            if (!document.getElementById('progressIndicator').classList.contains('visible')) return;
+
+            const queuePos = data.queue_position || 0;
+            const status = data.status;
+
+            let progressPercent = 0;
+            let message = '';
+
+            if (status === 'queued') {
+                progressPercent = 10;
+                message = `Waiting in queue... Position: ${queuePos}`;
+            } else if (status === 'processing') {
+                progressPercent = 50;
+                message = 'Processing audio with AI model...';
+            } else if (status === 'completed') {
+                progressPercent = 100;
+                message = 'Completed!';
+            }
+
+            document.getElementById('progressFill').style.width = `${progressPercent}%`;
+            document.getElementById('progressFill').textContent = `${progressPercent}%`;
+            document.getElementById('progressMessage').textContent = message;
+            document.getElementById('progressPosition').textContent = `Position: ${queuePos}`;
+        }
+
+        function hideProgressIndicator() {
+            document.getElementById('progressIndicator').classList.remove('visible');
+        }
+
+        function displayResult(jobData) {
+            document.getElementById('resultsSection').style.display = 'block';
+
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'result-item';
+
+            const header = document.createElement('div');
+            header.className = 'result-header';
+
+            const title = document.createElement('h3');
+            title.textContent = `Result #${allResults.length + 1}`;
+
+            const badge = document.createElement('span');
+            badge.className = 'result-badge';
+            if (jobData.mode && jobData.mode.toLowerCase().includes('summary') && jobData.summary_length) {
+                badge.textContent = `${jobData.mode} (${jobData.summary_length})`;
+            } else {
+                badge.textContent = jobData.mode || 'Result';
+            }
+
+            header.appendChild(title);
+            header.appendChild(badge);
+
+            const content = document.createElement('div');
+            content.className = 'result-content';
+            content.textContent = jobData.result;
+
+            resultDiv.appendChild(header);
+            resultDiv.appendChild(content);
+
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.insertBefore(resultDiv, resultsContainer.firstChild);
+
+            allResults.push({
+                mode: jobData.mode,
+                result: jobData.result,
+                timestamp: new Date().toISOString()
+            });
+
+            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Job History Management
+        function saveJobToHistory(jobId, mode, queuePosition, estimatedWait) {
+            let history = JSON.parse(localStorage.getItem('jobHistory') || '[]');
+            
+            history.unshift({
+                jobId: jobId,
+                mode: mode,
+                status: 'pending',
+                queuePosition: queuePosition,
+                estimatedWait: estimatedWait,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Keep only last 20 jobs
+            if (history.length > 20) {
+                history = history.slice(0, 20);
+            }
+            
+            localStorage.setItem('jobHistory', JSON.stringify(history));
+            loadJobHistory();
+        }
+
+        function updateJobHistory(jobId, status) {
+            let history = JSON.parse(localStorage.getItem('jobHistory') || '[]');
+            
+            const job = history.find(j => j.jobId === jobId);
+            if (job) {
+                job.status = status;
+                job.completedAt = new Date().toISOString();
+                localStorage.setItem('jobHistory', JSON.stringify(history));
+                loadJobHistory();
+            }
+        }
+
+        function loadJobHistory() {
+            const history = JSON.parse(localStorage.getItem('jobHistory') || '[]');
+            
+            if (history.length === 0) {
+                document.getElementById('jobHistorySection').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('jobHistorySection').style.display = 'block';
+            
+            const container = document.getElementById('jobHistory');
+            container.innerHTML = '';
+            
+            history.forEach(job => {
+                const jobDiv = document.createElement('div');
+                jobDiv.className = `job-item ${job.status}`;
+                jobDiv.onclick = () => checkJobById(job.jobId);
+                
+                const statusIcon = job.status === 'completed' ? '✓' : 
+                                  job.status === 'error' ? '✗' : '⏳';
+                
+                const time = new Date(job.timestamp).toLocaleTimeString();
+                
+                jobDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>${statusIcon} ${job.mode}</strong>
+                            <div style="font-size: 0.85em; color: #666;">
+                                Job ID: ${job.jobId.substring(0, 12)}... | ${time}
+                            </div>
+                        </div>
+                        <div style="text-align: right; font-size: 0.85em;">
+                            <div>${job.status.toUpperCase()}</div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(jobDiv);
+            });
+        }
+
+        async function checkJobById(jobId) {
+            log(`🔍 Checking job: ${jobId.substring(0, 8)}...`);
+            
+            try {
+                const response = await fetch(`${serverUrl}/job_status/${jobId}`);
+                const data = await response.json();
+                
+                if (data.status === 'completed') {
+                    log(`✓ Found completed job!`);
+                    displayResult(data);
+                    updateJobHistory(jobId, 'completed');
+                } else if (data.status === 'error') {
+                    log(`✗ Job failed: ${data.error}`);
+                    alert(`Job failed: ${data.error}`);
+                    updateJobHistory(jobId, 'error');
+                } else {
+                    log(`⏳ Job status: ${data.status}`);
+                    const resume = confirm(
+                        `Job is still ${data.status}\n\n` +
+                        `Queue position: ${data.queue_position || 'N/A'}\n\n` +
+                        `Resume monitoring this job?`
+                    );
+                    if (resume) {
+                        showProgressIndicator(jobId, data.mode, data.queue_position || 0);
+                        connectWebSocket(jobId);
+                    }
+                }
+            } catch (error) {
+                log(`✗ Error checking job: ${error.message}`);
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        function clearJobHistory() {
+            if (confirm('Clear all job history?')) {
+                localStorage.removeItem('jobHistory');
+                loadJobHistory();
+                log('✓ Job history cleared');
+            }
+        }
+
+        async function genGlobalSummary() {
+            if (allResults.length === 0) {
+                log('⚠ No results available for global summary');
+                alert('No results available. Please process some audio first.');
+                return;
+            }
+
+            log('⏳ Generating global summary...');
+
+            try {
+                const texts = allResults.map(r => r.result);
+
+                const response = await fetch(`${serverUrl}/global_summary`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ texts: texts })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to generate global summary');
+                }
+
+                const data = await response.json();
+
+                displayResult({
+                    mode: 'GLOBAL SUMMARY',
+                    result: data.global_summary,
+                    summary_length: ''
+                });
+
+                log('✓ Global summary generated successfully!');
+
+            } catch (error) {
+                log('✗ Error generating global summary: ' + error.message);
+                alert('Error generating global summary: ' + error.message);
+            }
+        }
+
+        async function saveResults() {
+            if (allResults.length === 0) {
+                log('⚠ No results to save');
+                alert('No results to save. Please process some audio first.');
+                return;
+            }
+
+            log('💾 Saving results...');
+
+            try {
+                const meetingData = {
+                    meeting_date: document.getElementById('date').value,
+                    meeting_time: document.getElementById('time').value,
+                    venue: document.getElementById('venue').value,
+                    agenda: document.getElementById('agenda').value,
+                    context: document.getElementById('context').value,
+                    results: allResults
+                };
+
+                const response = await fetch(`${serverUrl}/save_results`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(meetingData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to save results');
+                }
+
+                const data = await response.json();
+                log(`✓ Results saved: ${data.filename}`);
+                alert('Results saved successfully!\n\nFile: ' + data.filename);
+
+            } catch (error) {
+                log('✗ Error saving results: ' + error.message);
+                alert('Error saving results: ' + error.message);
+            }
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if (!isPaused) {
+                    const elapsed = Math.floor((Date.now() - startTime - pausedTime) / 1000);
+                    const hours = Math.floor(elapsed / 3600);
+                    const minutes = Math.floor((elapsed % 3600) / 60);
+                    const seconds = elapsed % 60;
+
+                    document.getElementById('timer').textContent =
+                        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function log(message) {
+            const statusBox = document.getElementById('status');
+            const p = document.createElement('p');
+            const timestamp = new Date().toLocaleTimeString();
+            p.textContent = `[${timestamp}] ${message}`;
+            statusBox.appendChild(p);
+            statusBox.scrollTop = statusBox.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        async function convertToWav(audioBlob) {
+            return new Promise((resolve, reject) => {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const fileReader = new FileReader();
+
+                fileReader.onload = async function(e) {
+                    try {
+                        const arrayBuffer = e.target.result;
+                        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+                        const channelData = audioBuffer.numberOfChannels > 1
+                            ? audioBuffer.getChannelData(0)
+                            : audioBuffer.getChannelData(0);
+
+                        const wavBlob = encodeWAV(channelData, audioBuffer.sampleRate);
+                        resolve(wavBlob);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+
+                fileReader.onerror = reject;
+                fileReader.readAsArrayBuffer(audioBlob);
+            });
+        }
+
+        function encodeWAV(samples, sampleRate) {
+            const buffer = new ArrayBuffer(44 + samples.length * 2);
+            const view = new DataView(buffer);
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + samples.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, samples.length * 2, true);
+
+            floatTo16BitPCM(view, 44, samples);
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        function floatTo16BitPCM(view, offset, input) {
+            for (let i = 0; i < input.length; i++, offset += 2) {
+                const s = Math.max(-1, Math.min(1, input[i]));
+                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (queueStatusInterval) {
+                clearInterval(queueStatusInterval);
+            }
+            Object.values(activeWebSockets).forEach(ws => ws.close());
+        });
+    </script>
+</body>
+</html>
