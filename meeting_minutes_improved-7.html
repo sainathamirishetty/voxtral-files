@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Meeting Minutes Generator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .content { padding: 30px; }
+        .section {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .form-group { margin-bottom: 15px; }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+        .radio-group input[type="radio"] {
+            width: auto;
+            cursor: pointer;
+        }
+        button {
+            padding: 12px 25px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .status-box {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .status-box p { margin: 3px 0; }
+        .result-item {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .result-header h3 {
+            color: #667eea;
+            margin: 0;
+            font-size: 1.4em;
+        }
+        .result-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .result-content {
+            line-height: 1.8;
+            color: #333;
+            font-size: 15px;
+        }
+        .result-content h4 {
+            color: #667eea;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            font-size: 1.2em;
+            font-weight: 600;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .result-content p {
+            margin-bottom: 15px;
+            text-align: justify;
+            text-justify: inter-word;
+        }
+        .result-content ul, .result-content ol {
+            margin-left: 25px;
+            margin-bottom: 15px;
+            margin-top: 10px;
+        }
+        .result-content li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        .recording-indicator {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ffc107;
+        }
+        .recording-indicator.active { display: flex; }
+        .pulse {
+            width: 12px;
+            height: 12px;
+            background: #dc3545;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        .timer {
+            font-weight: 600;
+            color: #dc3545;
+            font-size: 1.1em;
+        }
+        .chunk-timer {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 0.9em;
+            margin-left: auto;
+        }
+        #connectionStatus {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+        .button-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .mode-info {
+            background: #e3f2fd;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2196f3;
+            font-size: 13px;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎙️ Meeting Minutes Generator</h1>
+        </div>
+
+        <div class="content">
+            <!-- Server Connection -->
+            <div class="section">
+                <h2>🌐 Server Connection</h2>
+                <div class="form-group">
+                    <label>Server URL:</label>
+                    <input type="text" id="serverUrl" value="http://127.0.0.1:8000">
+                </div>
+                <button class="btn-info" onclick="checkServer()">Test Connection</button>
+                <div id="connectionStatus"></div>
+            </div>
+
+            <!-- Meeting Info -->
+            <div class="section">
+                <h2>📋 Meeting Information</h2>
+                <div class="form-group">
+                    <label>Date:</label>
+                    <input type="date" id="date">
+                </div>
+                <div class="form-group">
+                    <label>Time:</label>
+                    <input type="time" id="time">
+                </div>
+                <div class="form-group">
+                    <label>Venue:</label>
+                    <input type="text" id="venue" placeholder="Conference Room A">
+                </div>
+                <div class="form-group">
+                    <label>Agenda:</label>
+                    <input type="text" id="agenda" placeholder="Quarterly Review Meeting">
+                </div>
+                <div class="form-group">
+                    <label>Additional Context:</label>
+                    <textarea id="context" rows="3" placeholder="Any additional information..."></textarea>
+                </div>
+            </div>
+
+            <!-- Processing Mode -->
+            <div class="section">
+                <h2>⚙️ Processing Mode</h2>
+                <div class="mode-info" id="modeInfo">
+                    Select a mode before starting the meeting. Transcription auto-processes every 60 seconds.
+                </div>
+                <div class="form-group">
+                    <label>Select Mode:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="mode" value="Transcription" id="modeTranscription" checked>
+                            Transcription (60s chunks)
+                        </label>
+                        <label>
+                            <input type="radio" name="mode" value="Summary" id="modeSummary">
+                            Summary (on switch/end)
+                        </label>
+                        <label>
+                            <input type="radio" name="mode" value="Action Points" id="modeActionPoints">
+                            Action Points (on switch/end)
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="summaryLengthGroup" style="display:none;">
+                    <label>Summary Length:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="summaryLength" value="Short" id="lengthShort">
+                            Short
+                        </label>
+                        <label>
+                            <input type="radio" name="summaryLength" value="Medium" id="lengthMedium" checked>
+                            Medium
+                        </label>
+                        <label>
+                            <input type="radio" name="summaryLength" value="Long" id="lengthLong">
+                            Long
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recording Controls -->
+            <div class="section">
+                <h2>🎤 Recording Controls</h2>
+                <div class="recording-indicator" id="recIndicator">
+                    <div class="pulse"></div>
+                    <span>Recording in progress...</span>
+                    <span class="timer" id="timer">00:00:00</span>
+                    <span class="chunk-timer" id="chunkTimer"></span>
+                </div>
+
+                <div class="button-row">
+                    <button class="btn-primary" id="startBtn" onclick="startMeeting()">Start Meeting</button>
+                    <button class="btn-warning" id="pauseBtn" onclick="pauseRec()" disabled>Pause</button>
+                    <button class="btn-danger" id="stopBtn" onclick="endMeeting()" disabled>End Meeting</button>
+                </div>
+
+                <div class="button-row">
+                    <button class="btn-info" onclick="uploadFile()">Upload Audio File</button>
+                    <button class="btn-primary" onclick="genGlobalSummary()">Generate Global Summary</button>
+                    <button class="btn-success" onclick="saveResults()">Save Results (.txt)</button>
+                </div>
+
+                <input type="file" id="fileInput" accept=".wav,.webm,.mp3,.m4a,.ogg" style="display:none" onchange="handleFile(event)">
+            </div>
+
+            <!-- Status -->
+            <div class="section">
+                <h2>📊 Status</h2>
+                <div class="status-box" id="status"></div>
+            </div>
+
+            <!-- Results -->
+            <div class="section" id="resultsSection" style="display:none;">
+                <h2>📝 Results</h2>
+                <div id="results"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        let isPaused = false;
+        let startTime = null;
+        let timerInterval = null;
+        let chunkTimerInterval = null;
+        let pausedTime = 0;
+        let pauseStartTime = null;
+        let serverUrl = 'http://localhost:8000';
+        let allResults = [];
+        let currentMode = 'Transcription';
+        let currentMimeType = 'audio/webm';
+        let transcriptionText = '';
+        let lastChunkTime = null;
+        let autoChunkInterval = null;
+        let audioContext = null;
+        let scriptProcessor = null;
+        let audioInput = null;
+        let bufferData = [];
+        let chunkCounter = 0; // Track chunk numbers
+        let meetingStartTime = null; // Track meeting start for filenames
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            document.getElementById('date').valueAsDate = today;
+            document.getElementById('time').value = today.toTimeString().slice(0, 5);
+
+            document.querySelectorAll('input[name="mode"]').forEach(radio => {
+                radio.addEventListener('change', handleModeChange);
+            });
+
+            handleModeChange();
+            checkServer();
+        });
+
+        function handleModeChange() {
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            const summaryLengthGroup = document.getElementById('summaryLengthGroup');
+            const modeInfo = document.getElementById('modeInfo');
+            
+            summaryLengthGroup.style.display = mode === 'Summary' ? 'block' : 'none';
+
+            if (mode === 'Transcription') {
+                modeInfo.textContent = '📝 Transcription mode: Auto-processes every 60 seconds and appends to one result.';
+            } else if (mode === 'Summary') {
+                modeInfo.textContent = '📄 Summary mode: Processes when you switch modes or end meeting. Creates new result.';
+            } else {
+                modeInfo.textContent = '✅ Action Points mode: Processes when you switch modes or end meeting. Creates new result.';
+            }
+
+            if (isRecording && mode !== currentMode) {
+                log(`🔄 Mode changed: ${currentMode} → ${mode}`);
+                processModeSwitch(currentMode, mode);
+            }
+        }
+
+        async function checkServer() {
+            serverUrl = document.getElementById('serverUrl').value;
+            log('Checking server connection...');
+
+            try {
+                const response = await fetch(`${serverUrl}/health`);
+                const data = await response.json();
+
+                const statusDiv = document.getElementById('connectionStatus');
+                if (data.status === 'healthy' && data.model_loaded) {
+                    statusDiv.innerHTML = '<span style="color:green;">✓ Server connected and model loaded!</span>';
+                    statusDiv.style.background = '#d4edda';
+                    log('✓ Server connected and ready');
+                } else {
+                    statusDiv.innerHTML = '<span style="color:orange;">⚠ Server connected but model not ready</span>';
+                    statusDiv.style.background = '#fff3cd';
+                    log('⚠ Server connected but model loading');
+                }
+            } catch (error) {
+                const statusDiv = document.getElementById('connectionStatus');
+                statusDiv.innerHTML = '<span style="color:red;">✗ Cannot connect to server</span>';
+                statusDiv.style.background = '#f8d7da';
+                log('✗ Cannot connect: ' + error.message);
+            }
+        }
+
+        async function startMeeting() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 16000,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+
+                // Reset all state
+                isRecording = false;
+                isPaused = false;
+                startTime = null;
+                pausedTime = 0;
+                pauseStartTime = null;
+                audioChunks = [];
+                bufferData = [];
+                transcriptionText = '';
+                currentMode = document.querySelector('input[name="mode"]:checked').value;
+                currentMimeType = 'audio/wav';
+
+                // Create AudioContext for direct WAV recording
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 16000
+                });
+
+                audioInput = audioContext.createMediaStreamSource(stream);
+                
+                // Use ScriptProcessor for direct PCM capture
+                const bufferSize = 4096;
+                scriptProcessor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+
+                scriptProcessor.onaudioprocess = function(e) {
+                    if (!isPaused && isRecording) {
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        // Store PCM data
+                        const buffer = new Float32Array(inputData);
+                        bufferData.push(buffer);
+                    }
+                };
+
+                audioInput.connect(scriptProcessor);
+                scriptProcessor.connect(audioContext.destination);
+
+                isRecording = true;
+                isPaused = false;
+                startTime = Date.now();
+                lastChunkTime = Date.now();
+                pausedTime = 0;
+                chunkCounter = 0; // Reset chunk counter
+                meetingStartTime = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19); // Store meeting start time
+                
+                startTimer();
+                startChunkTimer();
+
+                if (currentMode === 'Transcription') {
+                    startAutoChunking();
+                }
+
+                document.getElementById('recIndicator').classList.add('active');
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('pauseBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = false;
+
+                log('✓ Meeting started - Mode: ' + currentMode + ' (Direct WAV recording)');
+            } catch (error) {
+                log('✗ Error starting recording: ' + error.message);
+                alert('Error accessing microphone: ' + error.message);
+            }
+        }
+
+        function startAutoChunking() {
+            stopAutoChunking();
+            
+            autoChunkInterval = setInterval(() => {
+                if (isRecording && !isPaused && currentMode === 'Transcription') {
+                    log('⏰ Auto-processing 60-second transcription chunk');
+                    processCurrentChunk(currentMode);
+                    lastChunkTime = Date.now();
+                }
+            }, 60000);
+        }
+
+        function stopAutoChunking() {
+            if (autoChunkInterval) {
+                clearInterval(autoChunkInterval);
+                autoChunkInterval = null;
+            }
+        }
+
+        function startChunkTimer() {
+            chunkTimerInterval = setInterval(() => {
+                if (isRecording && !isPaused && currentMode === 'Transcription') {
+                    const elapsed = Math.floor((Date.now() - lastChunkTime) / 1000);
+                    const remaining = 60 - elapsed;
+                    if (remaining >= 0) {
+                        document.getElementById('chunkTimer').textContent = `Next chunk in: ${remaining}s`;
+                    }
+                } else {
+                    document.getElementById('chunkTimer').textContent = '';
+                }
+            }, 1000);
+        }
+
+        function pauseRec() {
+            if (!isRecording) {
+                log('⚠ No active recording to pause');
+                return;
+            }
+
+            if (isPaused) {
+                // Resume
+                isPaused = false;
+                if (pauseStartTime) {
+                    pausedTime += (Date.now() - pauseStartTime);
+                    pauseStartTime = null;
+                }
+                document.getElementById('pauseBtn').textContent = 'Pause';
+                log('✓ Recording resumed');
+            } else {
+                // Pause
+                isPaused = true;
+                pauseStartTime = Date.now();
+                document.getElementById('pauseBtn').textContent = 'Resume';
+                log('⏸ Recording paused');
+            }
+        }
+
+        async function processModeSwitch(oldMode, newMode) {
+            log(`📤 Processing audio with mode: ${oldMode}`);
+            
+            await processCurrentChunk(oldMode);
+            
+            currentMode = newMode;
+            
+            if (newMode === 'Transcription') {
+                lastChunkTime = Date.now();
+                startAutoChunking();
+            } else {
+                stopAutoChunking();
+            }
+        }
+
+        async function processCurrentChunk(mode) {
+            if (bufferData.length === 0) {
+                log('⚠ No audio to process');
+                return;
+            }
+
+            const summaryLength = document.querySelector('input[name="summaryLength"]:checked')?.value || 'Medium';
+
+            log(`📤 Processing chunk with mode: ${mode}`);
+
+            // Get all buffered data
+            const chunksToProcess = [...bufferData];
+            bufferData = []; // Clear for next chunk
+
+            // Calculate total samples
+            let totalLength = 0;
+            for (const chunk of chunksToProcess) {
+                totalLength += chunk.length;
+            }
+
+            // Merge all chunks into one array
+            const mergedData = new Float32Array(totalLength);
+            let offset = 0;
+            for (const chunk of chunksToProcess) {
+                mergedData.set(chunk, offset);
+                offset += chunk.length;
+            }
+
+            // Convert to WAV
+            const wavBlob = encodeWAV(mergedData, 16000);
+
+            const duration = (mergedData.length / 16000).toFixed(2);
+            log(`📊 WAV audio size: ${(wavBlob.size / 1024).toFixed(2)} KB, Duration: ${duration}s`);
+
+            // Increment chunk counter
+            chunkCounter++;
+
+            // Save chunk to client side
+            await saveChunkToClient(wavBlob, mode, chunkCounter);
+
+            // Send to server
+            log('📤 Sending WAV audio to server');
+            await sendAudioToServer(wavBlob, mode, summaryLength);
+        }
+
+        async function saveChunkToClient(wavBlob, mode, chunkNum) {
+            try {
+                // Create filename: meeting_TIMESTAMP_chunk_NUM_MODE.wav
+                const filename = `meeting_${meetingStartTime}_chunk_${String(chunkNum).padStart(3, '0')}_${mode.replace(' ', '_')}.wav`;
+                
+                const url = URL.createObjectURL(wavBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                log(`💾 Chunk saved: ${filename}`);
+            } catch (error) {
+                log(`⚠ Failed to save chunk: ${error.message}`);
+            }
+        }
+
+        async function endMeeting() {
+            if (!isRecording) {
+                log('⚠ No active meeting to end');
+                return;
+            }
+
+            log('🛑 Ending meeting...');
+
+            // Process any remaining audio with current mode
+            if (bufferData.length > 0) {
+                const mode = document.querySelector('input[name="mode"]:checked').value;
+                await processCurrentChunk(mode);
+            }
+
+            // Stop recording FIRST
+            isRecording = false;
+            
+            // Stop all timers
+            stopTimer();
+            stopAutoChunking();
+            if (chunkTimerInterval) {
+                clearInterval(chunkTimerInterval);
+                chunkTimerInterval = null;
+            }
+
+            // Clean up Web Audio API
+            try {
+                if (scriptProcessor) {
+                    scriptProcessor.onaudioprocess = null; // Remove event handler
+                    scriptProcessor.disconnect();
+                    scriptProcessor = null;
+                    log('✓ ScriptProcessor disconnected');
+                }
+                
+                if (audioInput) {
+                    // Get the media stream from audioInput
+                    const stream = audioInput.mediaStream;
+                    audioInput.disconnect();
+                    audioInput = null;
+                    log('✓ Audio input disconnected');
+                    
+                    // Stop all tracks in the stream
+                    if (stream) {
+                        stream.getTracks().forEach(track => {
+                            track.stop();
+                            log(`✓ Stopped track: ${track.kind}`);
+                        });
+                    }
+                }
+                
+                if (audioContext && audioContext.state !== 'closed') {
+                    await audioContext.close();
+                    audioContext = null;
+                    log('✓ AudioContext closed');
+                }
+            } catch (error) {
+                log('⚠ Error cleaning up audio: ' + error.message);
+            }
+
+            // Reset UI
+            document.getElementById('recIndicator').classList.remove('active');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('pauseBtn').textContent = 'Pause';
+            document.getElementById('timer').textContent = '00:00:00';
+            document.getElementById('chunkTimer').textContent = '';
+
+            // Reset state
+            bufferData = [];
+            transcriptionText = '';
+            chunkCounter = 0;
+            meetingStartTime = null;
+            isPaused = false;
+            pausedTime = 0;
+            pauseStartTime = null;
+            startTime = null;
+            lastChunkTime = null;
+
+            log('✓ Meeting ended successfully');
+        }
+
+        async function autoSaveMeetingAudio() {
+            if (allRecordedChunks.length === 0) {
+                log('⚠ No audio recorded to save');
+                return;
+            }
+
+            try {
+                const completeAudioBlob = new Blob(allRecordedChunks, { type: currentMimeType });
+                log(`💾 Auto-saving meeting audio: ${(completeAudioBlob.size / 1024).toFixed(2)} KB`);
+
+                // Determine extension from mime type
+                let extension = '.webm';
+                if (currentMimeType.includes('webm')) {
+                    extension = '.webm';
+                } else if (currentMimeType.includes('ogg')) {
+                    extension = '.ogg';
+                } else if (currentMimeType.includes('wav')) {
+                    extension = '.wav';
+                } else if (currentMimeType.includes('mp4') || currentMimeType.includes('m4a')) {
+                    extension = '.m4a';
+                }
+                
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const filename = `meeting_${timestamp}${extension}`;
+                
+                const url = URL.createObjectURL(completeAudioBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                log(`✓ Meeting audio saved: ${filename}`);
+                log(`ℹ️ Note: Audio saved in ${extension} format. You can convert to WAV using online tools or VLC media player.`);
+            } catch (error) {
+                log('✗ Error saving meeting audio: ' + error.message);
+            }
+        }
+
+        function uploadFile() {
+            document.getElementById('fileInput').click();
+        }
+
+        async function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            const summaryLength = document.querySelector('input[name="summaryLength"]:checked')?.value || 'Medium';
+
+            if (!mode) {
+                log('⚠ Please select a processing mode first');
+                alert('Please select a processing mode first');
+                event.target.value = '';
+                return;
+            }
+
+            log(`📤 Uploading file: ${file.name} with mode: ${mode}`);
+            await sendAudioToServer(file, mode, summaryLength);
+
+            event.target.value = '';
+        }
+
+        async function sendAudioToServer(audioBlob, mode, summaryLength) {
+            const formData = new FormData();
+            const filename = `chunk_${Date.now()}.wav`;
+
+            formData.append('file', audioBlob, filename);
+            formData.append('mode', mode);
+            if (mode === 'Summary') {
+                formData.append('summary_length', summaryLength);
+            }
+
+            try {
+                log(`⏳ Uploading WAV to server... (Mode: ${mode}${mode === 'Summary' ? `, Length: ${summaryLength}` : ''})`);
+
+                const response = await fetch(`${serverUrl}/process_audio`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Server request failed');
+                }
+
+                const data = await response.json();
+                log(`✓ Job created: ${data.job_id.substring(0, 8)}... (${data.mode})`);
+
+                pollJobStatus(data.job_id, mode);
+
+            } catch (error) {
+                log('✗ Error sending audio: ' + error.message);
+                alert('Error uploading audio: ' + error.message);
+            }
+        }
+
+        async function pollJobStatus(jobId, originalMode) {
+            const maxAttempts = 180;
+            let attempts = 0;
+            let completed = false;
+
+            const pollInterval = setInterval(async () => {
+                if (completed) return;
+
+                attempts++;
+
+                try {
+                    const response = await fetch(`${serverUrl}/job_status/${jobId}`);
+
+                    if (!response.ok) {
+                        throw new Error('Failed to get job status');
+                    }
+
+                    const data = await response.json();
+
+                    if (completed) return;
+
+                    if (data.status === 'completed') {
+                        completed = true;
+                        clearInterval(pollInterval);
+                        log(`✓ Job ${jobId.substring(0, 8)}... completed!`);
+                        displayResult(data, originalMode);
+                    } else if (data.status === 'error') {
+                        completed = true;
+                        clearInterval(pollInterval);
+                        log(`✗ Job ${jobId.substring(0, 8)}... failed: ${data.error}`);
+                        alert('Processing failed: ' + data.error);
+                    } else if (attempts >= maxAttempts) {
+                        completed = true;
+                        clearInterval(pollInterval);
+                        log(`⏱ Job ${jobId.substring(0, 8)}... timed out`);
+                        alert('Processing timed out. Please try again.');
+                    } else if (attempts % 5 === 0) {
+                        log(`⏳ Processing... (${attempts}s)`);
+                    }
+                } catch (error) {
+                    if (!completed) {
+                        completed = true;
+                        clearInterval(pollInterval);
+                        log('✗ Error polling job status: ' + error.message);
+                    }
+                }
+            }, 1000);
+        }
+
+        function displayResult(jobData, originalMode) {
+            document.getElementById('resultsSection').style.display = 'block';
+            const resultsContainer = document.getElementById('results');
+
+            if (originalMode === 'Transcription') {
+                let transcriptionDiv = document.getElementById('transcription-result');
+                
+                if (!transcriptionDiv) {
+                    transcriptionDiv = document.createElement('div');
+                    transcriptionDiv.id = 'transcription-result';
+                    transcriptionDiv.className = 'result-item';
+
+                    const header = document.createElement('div');
+                    header.className = 'result-header';
+
+                    const title = document.createElement('h3');
+                    title.textContent = 'Transcription';
+
+                    const badge = document.createElement('span');
+                    badge.className = 'result-badge';
+                    badge.textContent = 'Live Transcription';
+
+                    header.appendChild(title);
+                    header.appendChild(badge);
+
+                    const content = document.createElement('div');
+                    content.className = 'result-content';
+                    content.id = 'transcription-content';
+
+                    transcriptionDiv.appendChild(header);
+                    transcriptionDiv.appendChild(content);
+
+                    resultsContainer.insertBefore(transcriptionDiv, resultsContainer.firstChild);
+                }
+
+                const cleanText = jobData.result.replace(/\[TRANSCRIPTION\]\s*/g, '').trim();
+                transcriptionText += (transcriptionText ? '\n\n' : '') + cleanText;
+
+                const contentDiv = document.getElementById('transcription-content');
+                contentDiv.innerHTML = formatTextToHTML(transcriptionText);
+
+                allResults[0] = {
+                    mode: 'Transcription',
+                    result: transcriptionText,
+                    timestamp: new Date().toISOString()
+                };
+
+                transcriptionDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            } else {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'result-item';
+
+                const header = document.createElement('div');
+                header.className = 'result-header';
+
+                const title = document.createElement('h3');
+                title.textContent = `${originalMode}`;
+
+                const badge = document.createElement('span');
+                badge.className = 'result-badge';
+                if (originalMode === 'Summary' && jobData.summary_length) {
+                    badge.textContent = `${jobData.summary_length} Length`;
+                } else if (originalMode === 'GLOBAL SUMMARY') {
+                    badge.textContent = 'Global';
+                } else {
+                    badge.textContent = originalMode;
+                }
+
+                header.appendChild(title);
+                header.appendChild(badge);
+
+                const content = document.createElement('div');
+                content.className = 'result-content';
+                
+                const cleanText = jobData.result
+                    .replace(/\[SUMMARY[^\]]*\]\s*/g, '')
+                    .replace(/\[ACTION POINTS\]\s*/g, '')
+                    .replace(/\[GLOBAL SUMMARY\]\s*/g, '')
+                    .trim();
+                
+                content.innerHTML = formatTextToHTML(cleanText);
+
+                resultDiv.appendChild(header);
+                resultDiv.appendChild(content);
+
+                resultsContainer.insertBefore(resultDiv, resultsContainer.firstChild);
+
+                allResults.push({
+                    mode: originalMode,
+                    result: jobData.result,
+                    timestamp: new Date().toISOString()
+                });
+
+                resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        function formatTextToHTML(text) {
+            // Remove all markdown-style formatting
+            text = text
+                .replace(/\*\*\*/g, '')  // Remove bold+italic ***
+                .replace(/\*\*/g, '')    // Remove bold **
+                .replace(/\*/g, '')      // Remove italic *
+                .replace(/__|__/g, '')   // Remove underscores
+                .replace(/~~(.+?)~~/g, '$1'); // Remove strikethrough
+            
+            let html = '';
+            const lines = text.split('\n');
+            let inParagraph = false;
+            let inOrderedList = false;
+            let inUnorderedList = false;
+            let currentListNumber = 1; // Track proper numbering
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+
+                // Skip empty lines
+                if (line === '') {
+                    if (inParagraph) {
+                        html += '</p>';
+                        inParagraph = false;
+                    }
+                    if (inOrderedList) {
+                        html += '</ol>';
+                        inOrderedList = false;
+                        currentListNumber = 1;
+                    }
+                    if (inUnorderedList) {
+                        html += '</ul>';
+                        inUnorderedList = false;
+                    }
+                    continue;
+                }
+
+                // Check for numbered lists (1. or 1) format)
+                // This handles cases where AI outputs "1." for every item
+                const numberedMatch = line.match(/^(\d+)[\.\)]\s+(.+)/);
+                if (numberedMatch) {
+                    if (inParagraph) {
+                        html += '</p>';
+                        inParagraph = false;
+                    }
+                    if (inUnorderedList) {
+                        html += '</ul>';
+                        inUnorderedList = false;
+                    }
+                    if (!inOrderedList) {
+                        html += '<ol>';
+                        inOrderedList = true;
+                        currentListNumber = 1;
+                    }
+                    // Use our own counter instead of AI's numbering
+                    html += `<li value="${currentListNumber}">${numberedMatch[2]}</li>`;
+                    currentListNumber++;
+                    continue;
+                }
+
+                // Check for bullet lists (-, *, •)
+                const bulletMatch = line.match(/^[-•]\s+(.+)/);
+                if (bulletMatch) {
+                    if (inParagraph) {
+                        html += '</p>';
+                        inParagraph = false;
+                    }
+                    if (inOrderedList) {
+                        html += '</ol>';
+                        inOrderedList = false;
+                        currentListNumber = 1;
+                    }
+                    if (!inUnorderedList) {
+                        html += '<ul>';
+                        inUnorderedList = true;
+                    }
+                    html += `<li>${bulletMatch[1]}</li>`;
+                    continue;
+                }
+
+                // Check for section headers (all caps with colon or just all caps)
+                if (line.match(/^[A-Z\s]{4,}:?\s*$/)) {
+                    if (inParagraph) {
+                        html += '</p>';
+                        inParagraph = false;
+                    }
+                    if (inOrderedList) {
+                        html += '</ol>';
+                        inOrderedList = false;
+                        currentListNumber = 1;
+                    }
+                    if (inUnorderedList) {
+                        html += '</ul>';
+                        inUnorderedList = false;
+                    }
+                    html += `<h4>${line.replace(/:+$/, '')}</h4>`;
+                    continue;
+                }
+
+                // Regular paragraph text
+                if (inOrderedList) {
+                    html += '</ol>';
+                    inOrderedList = false;
+                    currentListNumber = 1;
+                }
+                if (inUnorderedList) {
+                    html += '</ul>';
+                    inUnorderedList = false;
+                }
+                
+                if (!inParagraph) {
+                    html += '<p>';
+                    inParagraph = true;
+                } else {
+                    html += ' ';
+                }
+                html += line;
+            }
+
+            // Close any open tags
+            if (inParagraph) {
+                html += '</p>';
+            }
+            if (inOrderedList) {
+                html += '</ol>';
+            }
+            if (inUnorderedList) {
+                html += '</ul>';
+            }
+
+            return html;
+        }
+
+        async function genGlobalSummary() {
+            if (allResults.length === 0) {
+                log('⚠ No results available for global summary');
+                alert('No results available. Please process some audio first.');
+                return;
+            }
+
+            log('⏳ Generating global summary...');
+
+            try {
+                const texts = allResults.map(r => r.result);
+
+                const response = await fetch(`${serverUrl}/global_summary`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ texts: texts })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to generate global summary');
+                }
+
+                const data = await response.json();
+
+                displayResult({
+                    mode: 'GLOBAL SUMMARY',
+                    result: data.global_summary,
+                    summary_length: ''
+                }, 'GLOBAL SUMMARY');
+
+                log('✓ Global summary generated successfully!');
+
+            } catch (error) {
+                log('✗ Error generating global summary: ' + error.message);
+                alert('Error generating global summary: ' + error.message);
+            }
+        }
+
+        async function saveResults() {
+            if (allResults.length === 0) {
+                log('⚠ No results to save');
+                alert('No results to save. Please process some audio first.');
+                return;
+            }
+
+            log('💾 Preparing results for download...');
+
+            try {
+                const meetingDate = document.getElementById('date').value || 'Not specified';
+                const meetingTime = document.getElementById('time').value || 'Not specified';
+                const venue = document.getElementById('venue').value || 'Not specified';
+                const agenda = document.getElementById('agenda').value || 'Not specified';
+                const context = document.getElementById('context').value || 'None';
+
+                let content = '';
+                content += '================================================================================\n';
+                content += '                          MEETING MINUTES\n';
+                content += '================================================================================\n\n';
+                
+                content += 'MEETING INFORMATION\n';
+                content += '--------------------------------------------------------------------------------\n';
+                content += `Date:           ${meetingDate}\n`;
+                content += `Time:           ${meetingTime}\n`;
+                content += `Venue:          ${venue}\n`;
+                content += `Agenda:         ${agenda}\n\n`;
+                
+                if (context && context !== 'None') {
+                    content += 'ADDITIONAL CONTEXT\n';
+                    content += '--------------------------------------------------------------------------------\n';
+                    content += `${context}\n\n`;
+                }
+
+                content += 'RESULTS\n';
+                content += '================================================================================\n\n';
+
+                allResults.forEach((result, index) => {
+                    content += `[${index + 1}] ${result.mode.toUpperCase()}\n`;
+                    content += '--------------------------------------------------------------------------------\n';
+                    
+                    const cleanText = result.result
+                        .replace(/\[TRANSCRIPTION\]\s*/g, '')
+                        .replace(/\[SUMMARY[^\]]*\]\s*/g, '')
+                        .replace(/\[ACTION POINTS\]\s*/g, '')
+                        .replace(/\[GLOBAL SUMMARY\]\s*/g, '')
+                        .trim();
+                    
+                    content += `${cleanText}\n\n`;
+                    content += '================================================================================\n\n';
+                });
+
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                content += `\nGenerated on: ${new Date().toLocaleString()}\n`;
+                content += `File: meeting_minutes_${timestamp}.txt\n`;
+
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `meeting_minutes_${timestamp}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                log(`✓ Results saved: meeting_minutes_${timestamp}.txt`);
+                alert('Results saved successfully!');
+
+            } catch (error) {
+                log('✗ Error saving results: ' + error.message);
+                alert('Error saving results: ' + error.message);
+            }
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if (!isPaused) {
+                    const elapsed = Math.floor((Date.now() - startTime - pausedTime) / 1000);
+                    const hours = Math.floor(elapsed / 3600);
+                    const minutes = Math.floor((elapsed % 3600) / 60);
+                    const seconds = elapsed % 60;
+
+                    document.getElementById('timer').textContent =
+                        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function log(message) {
+            const statusBox = document.getElementById('status');
+            const p = document.createElement('p');
+            const timestamp = new Date().toLocaleTimeString();
+            p.textContent = `[${timestamp}] ${message}`;
+            statusBox.appendChild(p);
+            statusBox.scrollTop = statusBox.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        async function convertToWav(audioBlob) {
+            return new Promise((resolve, reject) => {
+                // Create fresh AudioContext with explicit configuration
+                let audioContext = null;
+                
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        sampleRate: 16000,
+                        latencyHint: 'interactive'
+                    });
+                } catch (error) {
+                    log('✗ Failed to create AudioContext: ' + error.message);
+                    reject(new Error('AudioContext creation failed: ' + error.message));
+                    return;
+                }
+
+                const fileReader = new FileReader();
+                let processingComplete = false;
+
+                fileReader.onload = async function(e) {
+                    if (processingComplete) return;
+                    
+                    try {
+                        const arrayBuffer = e.target.result;
+                        
+                        // Log blob info for debugging
+                        log(`🔍 Decoding audio: ${audioBlob.type}, size: ${arrayBuffer.byteLength} bytes`);
+                        
+                        // Decode audio data
+                        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                        
+                        log(`✓ Decoded successfully: ${audioBuffer.duration.toFixed(2)}s, ${audioBuffer.numberOfChannels} channels`);
+
+                        // Get mono channel data
+                        const channelData = audioBuffer.getChannelData(0);
+
+                        // Encode to WAV
+                        const wavBlob = encodeWAV(channelData, audioBuffer.sampleRate);
+                        
+                        processingComplete = true;
+                        
+                        // Close AudioContext
+                        if (audioContext && audioContext.state !== 'closed') {
+                            await audioContext.close();
+                        }
+                        
+                        resolve(wavBlob);
+                    } catch (error) {
+                        processingComplete = true;
+                        log('✗ Decode error: ' + error.message);
+                        
+                        // Close AudioContext on error
+                        if (audioContext && audioContext.state !== 'closed') {
+                            await audioContext.close().catch(() => {});
+                        }
+                        
+                        reject(new Error('Audio decoding failed: ' + error.message));
+                    }
+                };
+
+                fileReader.onerror = (error) => {
+                    processingComplete = true;
+                    log('✗ FileReader error: ' + error);
+                    
+                    if (audioContext && audioContext.state !== 'closed') {
+                        audioContext.close().catch(() => {});
+                    }
+                    
+                    reject(new Error('FileReader failed: ' + error));
+                };
+
+                // Add timeout protection
+                const timeoutId = setTimeout(() => {
+                    if (!processingComplete) {
+                        processingComplete = true;
+                        log('✗ Conversion timeout after 30 seconds');
+                        
+                        if (audioContext && audioContext.state !== 'closed') {
+                            audioContext.close().catch(() => {});
+                        }
+                        
+                        reject(new Error('Conversion timeout'));
+                    }
+                }, 30000);
+
+                // Clear timeout on completion
+                const originalResolve = resolve;
+                const originalReject = reject;
+                
+                resolve = (val) => {
+                    clearTimeout(timeoutId);
+                    originalResolve(val);
+                };
+                
+                reject = (err) => {
+                    clearTimeout(timeoutId);
+                    originalReject(err);
+                };
+                
+                // Start reading
+                try {
+                    fileReader.readAsArrayBuffer(audioBlob);
+                } catch (error) {
+                    processingComplete = true;
+                    log('✗ Failed to read blob: ' + error.message);
+                    
+                    if (audioContext && audioContext.state !== 'closed') {
+                        audioContext.close().catch(() => {});
+                    }
+                    
+                    reject(new Error('Failed to read audio blob: ' + error.message));
+                }
+            });
+        }
+
+        function encodeWAV(samples, sampleRate) {
+            const buffer = new ArrayBuffer(44 + samples.length * 2);
+            const view = new DataView(buffer);
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + samples.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, samples.length * 2, true);
+
+            floatTo16BitPCM(view, 44, samples);
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        function floatTo16BitPCM(view, offset, input) {
+            for (let i = 0; i < input.length; i++, offset += 2) {
+                const s = Math.max(-1, Math.min(1, input[i]));
+                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+        }
+    </script>
+</body>
+</html>
