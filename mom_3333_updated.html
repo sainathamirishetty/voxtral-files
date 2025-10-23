@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Meeting Recorder — Background Final Processing</title>
+  <style>
+    :root { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    body { margin: 24px; }
+    h1 { margin: 0 0 8px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin: 12px 0; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+    .controls button { padding: 10px 16px; border-radius: 10px; border: 1px solid #e5e7eb; background: #f8fafc; cursor: pointer; }
+    .controls button:disabled { opacity: .5; cursor: not-allowed; }
+    .indicator { width: 10px; height: 10px; border-radius: 50%; background: #9ca3af; display: inline-block; margin-right: 8px; }
+    .indicator.active { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.15); }
+    #timer, #chunkTimer { font-variant-numeric: tabular-nums; }
+    .log { height: 160px; overflow: auto; background: #0b1020; color: #d1d5db; padding: 10px; border-radius: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas; font-size: 12px; }
+    .results { min-height: 160px; background: #fafafa; padding: 10px; border-radius: 10px; border: 1px dashed #d1d5db; }
+    .radio-group { display: flex; gap: 18px; flex-wrap: wrap; }
+    .tag { font-size: 12px; padding: 2px 8px; border: 1px solid #ddd; border-radius: 999px; background: #fff; }
+    .muted { color: #6b7280; }
+    .small { font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Meeting Recorder</h1>
+  <p class="muted small">Ends instantly. Final audio keeps processing in the background, then results appear here.</p>
+
+  <div class="card">
+    <div class="row">
+      <span id="recIndicator" class="indicator" title="Recording status"></span>
+      <strong id="statusText">Idle</strong>
+      <span class="tag">Elapsed <span id="timer">00:00:00</span></span>
+      <span class="tag">Chunk <span id="chunkTimer"></span></span>
+    </div>
+    <div class="row controls" style="margin-top: 10px;">
+      <button id="startBtn">Start</button>
+      <button id="pauseBtn" disabled>Pause</button>
+      <button id="stopBtn" disabled>End Meeting</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <div class="small muted" style="margin-bottom:6px;">Process</div>
+        <div class="radio-group" id="modeRadios">
+          <label><input type="radio" name="mode" value="Transcription" checked/> Transcription</label>
+          <label><input type="radio" name="mode" value="Summarization"/> Summarization</label>
+          <label><input type="radio" name="mode" value="ActionPoints"/> Action Points</label>
+        </div>
+      </div>
+      <div>
+        <div class="small muted" style="margin-bottom:6px;">Summary length</div>
+        <div class="radio-group">
+          <label><input type="radio" name="summaryLength" value="Short"/> Short</label>
+          <label><input type="radio" name="summaryLength" value="Medium" checked/> Medium</label>
+          <label><input type="radio" name="summaryLength" value="Long"/> Long</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content: space-between;">
+      <div><strong>Results</strong></div>
+      <div class="small muted">Completed jobs will append below automatically</div>
+    </div>
+    <div id="results" class="results"></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content: space-between;">
+      <div><strong>Log</strong></div>
+      <div class="small muted">Developer messages for debugging</div>
+    </div>
+    <pre id="log" class="log"></pre>
+  </div>
+
+  <script>
+    // -------------------- State --------------------
+    let audioContext = null;
+    let mediaStreamRef = null;
+    let scriptProcessor = null;
+    let audioInput = null;
+
+    let isRecording = false;
+    let isPaused = false;
+
+    let meetingMode = null; // locked mode from startMeeting()
+    let bufferData = [];    // Float32Array chunks
+    let chunkCounter = 0;
+
+    let startTime = null;
+    let pausedTime = 0;
+    let pauseStartTime = null;
+    let meetingStartTime = null;
+
+    let timerInterval = null;
+    let chunkTimerInterval = null;
+    let lastChunkTime = null;
+
+    // -------------------- UI helpers --------------------
+    const qs = (sel) => document.querySelector(sel);
+    const logEl = qs('#log');
+    const resultsEl = qs('#results');
+    function log(msg) {
+      const ts = new Date().toLocaleTimeString();
+      logEl.textContent += `[${ts}] ${msg}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(msg);
+    }
+    function setStatus(txt) {
+      qs('#statusText').textContent = txt;
+    }
+    function formatHHMMSS(ms) {
+      if (ms < 0) ms = 0;
+      const sec = Math.floor(ms / 1000);
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+
+    function startTimer() {
+      const base = Date.now();
+      const already = pausedTime;
+      timerInterval = setInterval(() => {
+        const elapsed = (Date.now() - base) + already;
+        qs('#timer').textContent = formatHHMMSS(elapsed);
+      }, 250);
+    }
+    function stopTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    function startChunkTimer() {
+      lastChunkTime = Date.now();
+      chunkTimerInterval = setInterval(() => {
+        const ms = Date.now() - lastChunkTime;
+        qs('#chunkTimer').textContent = formatHHMMSS(ms);
+      }, 250);
+    }
+    function stopChunkTimer() {
+      if (chunkTimerInterval) clearInterval(chunkTimerInterval);
+      chunkTimerInterval = null;
+      qs('#chunkTimer').textContent = '';
+    }
+
+    function stopAutoChunking() {
+      // Placeholder if you auto-cut chunks on a schedule in your app.
+      // Keep here for API compatibility with your previous code.
+    }
+
+    // -------------------- Audio + Recording --------------------
+    async function startMeeting() {
+      if (isRecording) return;
+
+      // Lock the mode at the moment the meeting starts
+      meetingMode = document.querySelector('input[name="mode"]:checked').value;
+
+      setStatus('Starting…');
+      log('🎤 Requesting microphone…');
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef = stream;
+
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(stream);
+      scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+      audioInput = source;
+
+      bufferData = [];
+      chunkCounter = 0;
+      isRecording = true;
+      isPaused = false;
+      pausedTime = 0;
+      pauseStartTime = null;
+      meetingStartTime = Date.now();
+      startTime = Date.now();
+
+      scriptProcessor.onaudioprocess = (e) => {
+        if (!isRecording || isPaused) return;
+        const input = e.inputBuffer.getChannelData(0);
+        // Copy to detach from internal buffer
+        bufferData.push(new Float32Array(input));
+      };
+
+      source.connect(scriptProcessor);
+      scriptProcessor.connect(audioContext.destination);
+
+      qs('#recIndicator').classList.add('active');
+      qs('#startBtn').disabled = true;
+      qs('#pauseBtn').disabled = false;
+      qs('#stopBtn').disabled = false;
+      qs('#pauseBtn').textContent = 'Pause';
+      setStatus(`Recording (${meetingMode})`);
+      startTimer();
+      startChunkTimer();
+
+      log(`✓ Recording started. Mode locked: ${meetingMode}`);
+    }
+
+    function togglePause() {
+      if (!isRecording) return;
+      isPaused = !isPaused;
+      qs('#pauseBtn').textContent = isPaused ? 'Resume' : 'Pause';
+      if (isPaused) {
+        pauseStartTime = Date.now();
+        stopChunkTimer();
+        setStatus('Paused');
+        log('⏸️ Paused');
+      } else {
+        if (pauseStartTime) pausedTime += Date.now() - pauseStartTime;
+        pauseStartTime = null;
+        startChunkTimer();
+        setStatus(`Recording (${meetingMode})`);
+        log('▶️ Resumed');
+      }
+    }
+
+    async function endMeeting() {
+      if (!isRecording) {
+        log('⚠️ No active meeting to end');
+        return;
+      }
+
+      log('🛑 Ending meeting…');
+      qs('#stopBtn').disabled = true;
+
+      // Stop timers/intervals RIGHT AWAY so no new buffers are added
+      stopTimer();
+      stopChunkTimer();
+      stopAutoChunking();
+
+      // Flip flags so ScriptProcessor stops pushing new buffers
+      isRecording = false;
+      isPaused = false;
+
+      // Immediately start background processing of any remaining audio
+      if (bufferData.length > 0 && audioContext) {
+        log('⏳ Finalizing last audio in background. You can start a new meeting.');
+        processFinalChunkInBackground(meetingMode);
+      } else {
+        log('ℹ️ No remaining audio to process.');
+      }
+
+      // Clean up audio graph + media quickly (does not affect already-built WAV)
+      try {
+        if (scriptProcessor) { scriptProcessor.onaudioprocess = null; }
+        if (scriptProcessor) { try { scriptProcessor.disconnect(); } catch(_){} scriptProcessor = null; }
+        if (audioInput) { try { audioInput.disconnect(); } catch(_){} audioInput = null; }
+        if (mediaStreamRef) {
+          try { mediaStreamRef.getTracks().forEach(t => { try { t.stop(); } catch(_){} }); } catch(_){}
+          mediaStreamRef = null;
+        }
+        if (audioContext && audioContext.state !== 'closed') {
+          try { await audioContext.close(); } catch(_) {}
+        }
+        audioContext = null;
+        log('✓ Audio resources cleaned up');
+      } catch(e) {
+        log('⚠️ Error during audio cleanup: ' + e.message);
+      }
+
+      // ✅ Reset UI IMMEDIATELY (don’t wait for server result)
+      qs('#recIndicator').classList.remove('active');
+      qs('#startBtn').disabled = false;
+      qs('#pauseBtn').disabled = true;
+      qs('#stopBtn').disabled = true;
+      qs('#pauseBtn').textContent = 'Pause';
+      qs('#timer').textContent = '00:00:00';
+      qs('#chunkTimer').textContent = '';
+      setStatus('Idle');
+      log('✅ Meeting ended. Final processing continues in background…');
+
+      // Reset state variables (note: background flow took a snapshot)
+      bufferData = [];
+      chunkCounter = 0;
+      meetingStartTime = null;
+      pausedTime = 0;
+      pauseStartTime = null;
+      startTime = null;
+      lastChunkTime = null;
+    }
+
+    // -------------------- Final-chunk background flow --------------------
+    async function buildFinalWavFromBufferedData() {
+      if (!bufferData || bufferData.length === 0) return null;
+
+      // Take a snapshot and clear buffer for safety
+      const chunksToProcess = bufferData;
+      bufferData = [];
+
+      // Merge samples
+      let totalLength = 0;
+      for (const chunk of chunksToProcess) totalLength += chunk.length;
+      const mergedData = new Float32Array(totalLength);
+      let offset = 0;
+      for (const chunk of chunksToProcess) {
+        mergedData.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      // Resample to 16k mono and encode WAV PCM16
+      const inputSr = (audioContext && audioContext.sampleRate) ? audioContext.sampleRate : 48000;
+      const resampled = downsampleTo16k(mergedData, inputSr);
+      const wavBlob = encodeWAV_PCM16(resampled, 16000);
+
+      const durationSeconds = mergedData.length / inputSr;
+      chunkCounter++;
+      await saveChunkToClient(wavBlob, meetingMode, chunkCounter);
+      return { wavBlob, durationSeconds };
+    }
+
+    function processFinalChunkInBackground(mode) {
+      const summaryLength =
+        document.querySelector('input[name="summaryLength"]:checked')?.value || 'Medium';
+
+      buildFinalWavFromBufferedData().then(finalPack => {
+        if (!finalPack) {
+          log('ℹ️ No remaining audio to upload in background.');
+          return;
+        }
+
+        const { wavBlob, durationSeconds } = finalPack;
+        log(`📤 Uploading final chunk in background... (~${durationSeconds.toFixed(2)}s)`);
+
+        // Kick off upload and polling, but do not await it
+        sendAudioToServer(wavBlob, mode, summaryLength)
+          .then(jobId => {
+            log('✓ Final chunk queued on server (background). Job: ' + (jobId ?? 'n/a'));
+            if (jobId) pollJobStatus(jobId);
+          })
+          .catch(err => log('✗ Final chunk upload error (background): ' + err.message));
+      }).catch(err => {
+        log('✗ Error preparing final WAV (background): ' + err.message);
+      });
+    }
+
+    // -------------------- Server I/O (adjust endpoints to your backend) --------------------
+    async function sendAudioToServer(blob, mode, summaryLength) {
+      // TODO: Replace with your real endpoint
+      const ENDPOINT = '/api/upload'; // e.g., '/upload' in your app
+      const fd = new FormData();
+      fd.append('mode', mode);
+      fd.append('summaryLength', summaryLength);
+      fd.append('file', blob, `final_chunk_${Date.now()}.wav`);
+
+      const res = await fetch(ENDPOINT, { method: 'POST', body: fd });
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      const data = await res.json();
+      // Expecting { jobId: '...' }
+      return data.jobId;
+    }
+
+    function pollJobStatus(jobId) {
+      // TODO: Replace with your real polling endpoint + payload contract
+      const STATUS_URL = `/api/job/${encodeURIComponent(jobId)}`;
+      const interval = setInterval(async () => {
+        try {
+          const r = await fetch(STATUS_URL, { method: 'GET' });
+          if (!r.ok) throw new Error('bad status');
+          const data = await r.json();
+          if (data.status === 'completed') {
+            clearInterval(interval);
+            appendResult(jobId, data.result || '(empty result)');
+          } else if (data.status === 'failed') {
+            clearInterval(interval);
+            appendResult(jobId, 'Job failed.');
+          }
+        } catch (e) {
+          clearInterval(interval);
+          appendResult(jobId, 'Polling error: ' + e.message);
+        }
+      }, 2500);
+    }
+
+    function appendResult(jobId, content) {
+      const box = document.createElement('div');
+      box.className = 'card';
+      box.innerHTML = `<div class="small muted">Job <code>${jobId}</code></div><div style="margin-top:6px; white-space:pre-wrap">${escapeHtml(String(content))}</div>`;
+      resultsEl.appendChild(box);
+    }
+
+    // -------------------- Files, WAV, utilities --------------------
+    async function saveChunkToClient(blob, mode, index) {
+      // Optional: auto-download each chunk for your local archive
+      // Comment the next lines if you don't want downloads.
+      try {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `chunk_${String(index).padStart(3,'0')}_${mode}_${new Date().toISOString().replace(/[:.]/g, '-')}.wav`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          URL.revokeObjectURL(a.href);
+          a.remove();
+        }, 1000);
+      } catch (e) {
+        log('⚠️ Could not auto-save chunk locally: ' + e.message);
+      }
+    }
+
+    function encodeWAV_PCM16(samples, sampleRate) {
+      // samples: Float32Array in [-1,1]
+      const numChannels = 1;
+      const bytesPerSample = 2;
+      const blockAlign = numChannels * bytesPerSample;
+      const byteRate = sampleRate * blockAlign;
+      const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+      const view = new DataView(buffer);
+
+      // RIFF header
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+      writeString(view, 8, 'WAVE');
+
+      // fmt  subchunk
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);             // PCM chunk size
+      view.setUint16(20, 1, true);              // PCM format
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, byteRate, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, 16, true);             // bits per sample
+
+      // data subchunk
+      writeString(view, 36, 'data');
+      view.setUint32(40, samples.length * bytesPerSample, true);
+
+      // PCM16 samples
+      let offset = 44;
+      for (let i = 0; i < samples.length; i++, offset += 2) {
+        let s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      }
+
+      return new Blob([view], { type: 'audio/wav' });
+    }
+
+    function writeString(view, offset, string) {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    }
+
+    // Basic linear resampler to 16k
+    function downsampleTo16k(buffer, inputSampleRate) {
+      const targetRate = 16000;
+      if (inputSampleRate === targetRate) return buffer;
+      const sampleRateRatio = inputSampleRate / targetRate;
+      const newLength = Math.round(buffer.length / sampleRateRatio);
+      const result = new Float32Array(newLength);
+      let offsetResult = 0;
+      let offsetBuffer = 0;
+      while (offsetResult < result.length) {
+        const nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
+        // average to reduce aliasing
+        let accum = 0, count = 0;
+        for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+          accum += buffer[i];
+          count++;
+        }
+        result[offsetResult] = accum / count;
+        offsetResult++;
+        offsetBuffer = nextOffsetBuffer;
+      }
+      return result;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      }[m]));
+    }
+
+    // -------------------- Wire up buttons --------------------
+    qs('#startBtn').addEventListener('click', startMeeting);
+    qs('#pauseBtn').addEventListener('click', togglePause);
+    qs('#stopBtn').addEventListener('click', endMeeting);
+  </script>
+</body>
+</html>
