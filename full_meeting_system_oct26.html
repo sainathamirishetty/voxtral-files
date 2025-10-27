@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Minutes of Meeting</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .back-btn {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .back-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+        .content { padding: 30px; }
+        .section {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .form-group { margin-bottom: 15px; }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+        .radio-group input[type="radio"] {
+            width: auto;
+            cursor: pointer;
+        }
+        button {
+            padding: 12px 25px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .status-box {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .status-box p { margin: 3px 0; }
+        .result-item {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .result-header h3 {
+            color: #667eea;
+            margin: 0;
+            font-size: 1.4em;
+        }
+        .result-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .result-content {
+            line-height: 1.8;
+            color: #333;
+            font-size: 15px;
+        }
+        .result-content h4 {
+            color: #667eea;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            font-size: 1.2em;
+            font-weight: 600;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .result-content p {
+            margin-bottom: 15px;
+            text-align: justify;
+            text-justify: inter-word;
+        }
+        .result-content ul, .result-content ol {
+            margin-left: 25px;
+            margin-bottom: 15px;
+            margin-top: 10px;
+        }
+        .result-content li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        .result-content .action-item {
+            margin-bottom: 12px;
+            line-height: 1.6;
+            padding-left: 0;
+        }
+        .result-content .action-item::before {
+            content: '➤ ';
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .recording-indicator {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ffc107;
+        }
+        .recording-indicator.active { display: flex; }
+        .pulse {
+            width: 12px;
+            height: 12px;
+            background: #dc3545;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        .timer {
+            font-weight: 600;
+            color: #dc3545;
+            font-size: 1.1em;
+        }
+        .chunk-timer {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 0.9em;
+            margin-left: auto;
+        }
+        #connectionStatus {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+        .button-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .mode-info {
+            background: #e3f2fd;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2196f3;
+            font-size: 13px;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <h1> Minutes of Meeting</h1>
+</div>
+
+        <div class="content">
+            <!-- Meeting Info -->
+            <div class="section">
+                <h2>📋 Meeting Information</h2>
+                <div class="form-group">
+                    <label>Date:</label>
+                    <input type="date" id="date">
+                </div>
+                <div class="form-group">
+                    <label>Time:</label>
+                    <input type="time" id="time">
+                </div>
+                <div class="form-group">
+                    <label>Venue:</label>
+                    <input type="text" id="venue" placeholder="">
+                </div>
+                <div class="form-group">
+                    <label>Agenda:</label>
+                    <input type="text" id="agenda" placeholder="">
+                </div>
+                <div class="form-group">
+                    <label>Additional Context:</label>
+                    <textarea id="context" rows="3" placeholder=""></textarea>
+                </div>
+            </div>
+
+            <!-- Processing Mode -->
+            <div class="section">
+                <h2>⚙️ Processing Mode</h2>
+                <div class="mode-info" id="modeInfo">
+                    📄 Summary: 5min auto-chunks | ✅ Action Points: 5min auto-chunks
+                </div>
+                <div class="form-group">
+                    <label>Select Mode:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="mode" value="Summary" id="modeSummary" checked>
+                            Summary
+                        </label>
+                        <label>
+                            <input type="radio" name="mode" value="Action Points" id="modeActionPoints">
+                            Action Points
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="summaryLengthGroup">
+                    <label>Summary Length:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="summaryLength" value="Short" id="lengthShort">
+                            Short
+                        </label>
+                        <label>
+                            <input type="radio" name="summaryLength" value="Medium" id="lengthMedium" checked>
+                            Medium
+                        </label>
+                        <label>
+                            <input type="radio" name="summaryLength" value="Long" id="lengthLong">
+                            Long
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recording Controls -->
+            <div class="section">
+                <h2>🎤 Recording Controls</h2>
+                <div class="recording-indicator" id="recIndicator">
+                    <div class="pulse"></div>
+                    <span>Recording in progress...</span>
+                    <span class="timer" id="timer">00:00:00</span>
+                    <span class="chunk-timer" id="chunkTimer"></span>
+                </div>
+
+                <div class="button-row">
+                    <button class="btn-primary" id="startBtn" onclick="startRec()">Start Meeting</button>
+                    <button class="btn-warning" id="pauseBtn" onclick="pauseRec()" disabled>Pause</button>
+                    <button class="btn-danger" id="stopBtn" onclick="endMeeting()" disabled>End Meeting</button>
+                </div>
+
+                <div class="button-row">
+                    <button class="btn-info" onclick="uploadFile()">Upload Audio File</button>
+                    <button class="btn-primary" onclick="genGlobalSummary()">Generate Global Summary</button>
+                    <button class="btn-success" onclick="saveResults()">Save Results (.doc)</button>
+                </div>
+
+                <input type="file" id="fileInput" accept=".wav,.webm,.mp3,.m4a,.ogg" style="display:none" onchange="handleFile(event)">
+            </div>
+
+            <!-- Status -->
+            <div class="section">
+                <h2>📊 Status</h2>
+                <div class="status-box" id="status"></div>
+            </div>
+
+            <!-- Results -->
+            <div class="section" id="resultsSection" style="display:none;">
+                <h2></h2>
+                <div id="results"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        let isPaused = false;
+        let startTime = null;
+        let timerInterval = null;
+        let chunkTimerInterval = null;
+        let pausedTime = 0;
+        let pauseStartTime = null;
+        let serverUrl = 'http://127.0.0.1:8000';
+        let allResults = [];
+        let currentMode = 'Summary';
+        let currentMimeType = 'audio/webm';
+        let lastChunkTime = null;
+        let autoChunkInterval = null;
+        let audioContext = null;
+        let scriptProcessor = null;
+        let audioInput = null;
+        let bufferData = [];
+        let chunkCounter = 0;
+        let meetingStartTime = null;
+        let mediaStreamRef = null;
+
+        function goBack() {
+            window.location.href = '/';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            document.getElementById('date').valueAsDate = today;
+            document.getElementById('time').value = today.toTimeString().slice(0, 5);
+
+            document.querySelectorAll('input[name="mode"]').forEach(radio => {
+                radio.addEventListener('change', handleModeChange);
+            });
+
+            handleModeChange();
+            checkServerSilently();
+        });
+
+        async function checkServerSilently() {
+            try {
+                const response = await fetch(`${serverUrl}/health`);
+                const data = await response.json();
+                if (data.status === 'healthy' && data.model_loaded) {
+                    log('✓ Server connected and ready');
+                } else {
+                    log('⚠ Server connected but model loading');
+                }
+            } catch (error) {
+                log('✗ Cannot connect: ' + error.message);
+            }
+        }
+
+        function handleModeChange() {
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            const summaryLengthGroup = document.getElementById('summaryLengthGroup');
+            const modeInfo = document.getElementById('modeInfo');
+
+            summaryLengthGroup.style.display = mode === 'Summary' ? 'block' : 'none';
+
+            if (mode === 'Summary') {
+                modeInfo.textContent = '📄 Summary mode: Auto-processes every 5 minutes. Creates new result each time.';
+            } else {
+                modeInfo.textContent = '✅ Action Points mode: Auto-processes every 5 minutes. Creates new result each time.';
+            }
+
+            if (isRecording && mode !== currentMode) {
+                log(`🔄 Mode changed: ${currentMode} → ${mode}`);
+                processModeSwitch(currentMode, mode);
+            }
+        }
+
+        async function startRec() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+                mediaStreamRef = stream;
+
+                isRecording = false;
+                isPaused = false;
+                startTime = null;
+                pausedTime = 0;
+                pauseStartTime = null;
+                audioChunks = [];
+                bufferData = [];
+                currentMode = document.querySelector('input[name="mode"]:checked').value;
+                currentMimeType = 'audio/wav';
+
+                const audioTrack = stream.getAudioTracks()[0];
+                const settings = audioTrack.getSettings();
+                const micSampleRate = settings.sampleRate || 48000;
+
+                log(`🎤 Microphone sample rate: ${micSampleRate}Hz`);
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: micSampleRate
+                });
+
+                audioInput = audioContext.createMediaStreamSource(stream);
+
+                const bufferSize = 4096;
+                scriptProcessor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+
+                scriptProcessor.onaudioprocess = function(e) {
+                    if (!isPaused && isRecording) {
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        const buffer = new Float32Array(inputData);
+                        bufferData.push(buffer);
+                    }
+                };
+
+                audioInput.connect(scriptProcessor);
+                scriptProcessor.connect(audioContext.destination);
+
+                isRecording = true;
+                isPaused = false;
+                startTime = Date.now();
+                lastChunkTime = Date.now();
+                pausedTime = 0;
+                chunkCounter = 0;
+                meetingStartTime = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+                startTimer();
+                startChunkTimer();
+
+                startAutoChunking();
+
+                document.getElementById('recIndicator').classList.add('active');
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('pauseBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = false;
+
+                log('✓ Meeting started - Mode: ' + currentMode + ` (Recording at ${micSampleRate}Hz)`);
+            } catch (error) {
+                log('✗ Error starting recording: ' + error.message);
+                alert('Error accessing microphone: ' + error.message);
+            }
+        }
+
+        function getChunkDuration(mode) {
+            return 300000; // 5 minutes for both Summary and Action Points
+        }
+
+        function startAutoChunking() {
+            stopAutoChunking();
+
+            const duration = getChunkDuration(currentMode);
+
+            autoChunkInterval = setInterval(() => {
+                if (isRecording && !isPaused) {
+                    log(`⏰ Auto-processing ${duration/1000}-second ${currentMode} chunk`);
+                    processCurrentChunk(currentMode);
+                    lastChunkTime = Date.now();
+                }
+            }, duration);
+        }
+
+        function stopAutoChunking() {
+            if (autoChunkInterval) {
+                clearInterval(autoChunkInterval);
+                autoChunkInterval = null;
+            }
+        }
+
+        function startChunkTimer() {
+            chunkTimerInterval = setInterval(() => {
+                if (isRecording && !isPaused) {
+                    const elapsed = Math.floor((Date.now() - lastChunkTime) / 1000);
+                    const chunkDuration = getChunkDuration(currentMode) / 1000;
+                    const remaining = chunkDuration - elapsed;
+
+                    if (remaining >= 0) {
+                        const minutes = Math.floor(remaining / 60);
+                        const seconds = remaining % 60;
+                        const timeStr = minutes > 0
+                            ? `${minutes}m ${seconds}s`
+                            : `${seconds}s`;
+                        document.getElementById('chunkTimer').textContent = `Next chunk in: ${timeStr}`;
+                    }
+                } else {
+                    document.getElementById('chunkTimer').textContent = '';
+                }
+            }, 1000);
+        }
+
+        function pauseRec() {
+            if (!isRecording) {
+                log('⚠️ No active recording to pause');
+                return;
+            }
+
+            if (isPaused) {
+                isPaused = false;
+                if (pauseStartTime) {
+                    pausedTime += (Date.now() - pauseStartTime);
+                    pauseStartTime = null;
+                }
+                document.getElementById('pauseBtn').textContent = 'Pause';
+                log('✓ Recording resumed');
+            } else {
+                isPaused = true;
+                pauseStartTime = Date.now();
+                document.getElementById('pauseBtn').textContent = 'Resume';
+                log('⏸ Recording paused');
+            }
+        }
+
+        async function processModeSwitch(oldMode, newMode) {
+            log(`🔤 Processing accumulated audio with mode: ${oldMode}`);
+
+            await processCurrentChunk(oldMode);
+
+            currentMode = newMode;
+
+            lastChunkTime = Date.now();
+            log(`✅ Switched to ${newMode} mode - Timer reset, next chunk in ${getChunkDuration(newMode)/1000}s`);
+
+            startAutoChunking();
+        }
+
+        async function processCurrentChunk(mode) {
+            if (bufferData.length === 0) {
+                log('⚠️ No audio to process');
+                return;
+            }
+
+            const summaryLength = document.querySelector('input[name="summaryLength"]:checked')?.value || 'Medium';
+
+            log(`🔤 Processing chunk with mode: ${mode}`);
+
+            const chunksToProcess = [...bufferData];
+            bufferData = [];
+
+            let totalLength = 0;
+            for (const chunk of chunksToProcess) {
+                totalLength += chunk.length;
+            }
+
+            const mergedData = new Float32Array(totalLength);
+            let offset = 0;
+            for (const chunk of chunksToProcess) {
+                mergedData.set(chunk, offset);
+                offset += chunk.length;
+            }
+
+            const wavBlob = encodeWAV(mergedData, audioContext.sampleRate, 16000);
+
+            const duration = (mergedData.length / audioContext.sampleRate).toFixed(2);
+            log(`📊 WAV audio size: ${(wavBlob.size / 1024).toFixed(2)} KB, Duration: ${duration}s`);
+
+            chunkCounter++;
+
+            await saveChunkToClient(wavBlob, mode, chunkCounter);
+
+            log('🔤 Sending WAV audio to server');
+            await sendAudioToServer(wavBlob, mode, summaryLength);
+        }
+
+        async function processCurrentChunkAndWait(mode) {
+            if (bufferData.length === 0) {
+                log('⚠️ No audio to process');
+                return;
+            }
+
+            const summaryLength = document.querySelector('input[name="summaryLength"]:checked')?.value || 'Medium';
+
+            log(`🔤 Processing final chunk with mode: ${mode}`);
+
+            const chunksToProcess = [...bufferData];
+            bufferData = [];
+
+            let totalLength = 0;
+            for (const chunk of chunksToProcess) {
+                totalLength += chunk.length;
+            }
+
+            const mergedData = new Float32Array(totalLength);
+            let offset = 0;
+            for (const chunk of chunksToProcess) {
+                mergedData.set(chunk, offset);
+                offset += chunk.length;
+            }
+
+            const wavBlob = encodeWAV(mergedData, audioContext.sampleRate, 16000);
+
+            const duration = (mergedData.length / audioContext.sampleRate).toFixed(2);
+            log(`📊 WAV audio size: ${(wavBlob.size / 1024).toFixed(2)} KB, Duration: ${duration}s`);
+
+            chunkCounter++;
+
+            await saveChunkToClient(wavBlob, mode, chunkCounter);
+
+            log('🔤 Sending final WAV audio to server and waiting for completion...');
+            await sendAudioToServerAndWait(wavBlob, mode, summaryLength);
+        }
+
+        async function saveChunkToClient(wavBlob, mode, chunkNum) {
+            try {
+                const filename = `meeting_${meetingStartTime}_chunk_${String(chunkNum).padStart(3, '0')}_${mode.replace(' ', '_')}.wav`;
+
+                const url = URL.createObjectURL(wavBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                log(`💾 Chunk saved: ${filename}`);
+            } catch (error) {
+                log(`⚠️ Failed to save chunk: ${error.message}`);
+            }
+        }
+
+        async function endMeeting() {
+            if (!isRecording) {
+                log('⚠️ No active meeting to end');
+                return;
+            }
+
+            log('🛑 Ending meeting...');
+
+            document.getElementById('stopBtn').disabled = true;
+            log('⏳ Please wait - processing final audio chunk...');
+
+            stopTimer();
+            stopAutoChunking();
+            if (chunkTimerInterval) {
+                clearInterval(chunkTimerInterval);
+                chunkTimerInterval = null;
+            }
+
+            isRecording = false;
+            isPaused = false;
+
+            try {
+                if (bufferData.length > 0) {
+                    const mode = document.querySelector('input[name="mode"]:checked').value;
+                    log('🔤 Processing final audio chunk...');
+                    await processCurrentChunkAndWait(mode);
+                    log('✅ Final chunk processing complete!');
+                } else {
+                    log('ℹ️ No remaining audio to process');
+                }
+            } catch (err) {
+                log('✗ Error while processing final chunk: ' + err.message);
+            }
+
+            try {
+                if (scriptProcessor) {
+                    scriptProcessor.onaudioprocess = null;
+                    try { scriptProcessor.disconnect(); } catch(e){}
+                    scriptProcessor = null;
+                    log('✓ Audio processing stopped');
+                }
+
+                if (audioInput) {
+                    try { audioInput.disconnect(); } catch(e){}
+                    audioInput = null;
+                    log('✓ Audio input disconnected');
+                }
+
+                if (mediaStreamRef) {
+                    try {
+                        mediaStreamRef.getTracks().forEach(track => {
+                            try { track.stop(); } catch(e){}
+                            log(`✓ Stopped ${track.kind} track`);
+                        });
+                    } catch (e) {
+                        log('⚠️ Error stopping media tracks: ' + e.message);
+                    }
+                    mediaStreamRef = null;
+                }
+
+                if (audioContext && audioContext.state !== 'closed') {
+                    try {
+                        await audioContext.close();
+                        audioContext = null;
+                        log('✓ AudioContext closed');
+                    } catch (e) {
+                        log('⚠️ Error closing AudioContext: ' + e.message);
+                    }
+                }
+            } catch (error) {
+                log('⚠️ Error cleaning up audio: ' + error.message);
+            }
+
+            document.getElementById('recIndicator').classList.remove('active');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('pauseBtn').textContent = 'Pause';
+            document.getElementById('timer').textContent = '00:00:00';
+            document.getElementById('chunkTimer').textContent = '';
+
+            bufferData = [];
+            chunkCounter = 0;
+            meetingStartTime = null;
+            isPaused = false;
+            pausedTime = 0;
+            pauseStartTime = null;
+            startTime = null;
+            lastChunkTime = null;
+
+            log('✅ Meeting ended successfully - all processing complete!');
+        }
+
+        function uploadFile() {
+            document.getElementById('fileInput').click();
+        }
+
+        async function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            const summaryLength = document.querySelector('input[name="summaryLength"]:checked')?.value || 'Medium';
+
+            if (!mode) {
+                log('⚠️ Please select a processing mode first');
+                alert('Please select a processing mode first');
+                event.target.value = '';
+                return;
+            }
+
+            log(`🔤 Uploading file: ${file.name} with mode: ${mode}`);
+            await sendAudioToServer(file, mode, summaryLength);
+
+            event.target.value = '';
+        }
+
+        async function sendAudioToServer(audioBlob, mode, summaryLength) {
+            const formData = new FormData();
+            const filename = `chunk_${Date.now()}.wav`;
+
+            formData.append('file', audioBlob, filename);
+            formData.append('mode', mode);
+            if (mode === 'Summary') {
+                formData.append('summary_length', summaryLength);
+            }
+
+            try {
+                log(`⏳ Uploading WAV to server... (Mode: ${mode}${mode === 'Summary' ? `, Length: ${summaryLength}` : ''})`);
+
+                const response = await fetch(`${serverUrl}/process_audio`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Server request failed');
+                }
+
+                const data = await response.json();
+                log(`✓ Job created: ${data.job_id.substring(0, 8)}... (${data.mode})`);
+
+                pollJobStatus(data.job_id, mode);
+
+            } catch (error) {
+                log('✗ Error sending audio: ' + error.message);
+                alert('Error uploading audio: ' + error.message);
+            }
+        }
+
+        async function sendAudioToServerAndWait(audioBlob, mode, summaryLength) {
+            const formData = new FormData();
+            const filename = `chunk_${Date.now()}.wav`;
+
+            formData.append('file', audioBlob, filename);
+            formData.append('mode', mode);
+            if (mode === 'Summary') {
+                formData.append('summary_length', summaryLength);
+            }
+
+            try {
+                log(`⏳ Uploading final WAV to server... (Mode: ${mode}${mode === 'Summary' ? `, Length: ${summaryLength}` : ''})`);
+
+                const response = await fetch(`${serverUrl}/process_audio`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Server request failed');
+                }
+
+                const data = await response.json();
+                log(`✓ Final job created: ${data.job_id.substring(0, 8)}... (${data.mode})`);
+
+                await waitForJobCompletion(data.job_id, mode);
+
+            } catch (error) {
+                log('✗ Error sending final audio: ' + error.message);
+                alert('Error uploading final audio: ' + error.message);
+            }
+        }
+
+        async function waitForJobCompletion(jobId, originalMode) {
+            return new Promise(async (resolve, reject) => {
+                const maxAttempts = 180;
+                let attempts = 0;
+
+                const checkStatus = async () => {
+                    attempts++;
+
+                    try {
+                        const response = await fetch(`${serverUrl}/job_status/${jobId}`);
+
+                        if (!response.ok) {
+                            throw new Error('Failed to get job status');
+                        }
+
+                        const data = await response.json();
+
+                        if (data.status === 'completed') {
+                            log(`✅ Final job ${jobId.substring(0, 8)}... completed!`);
+                            displayResult(data, originalMode);
+                            resolve();
+                        } else if (data.status === 'error') {
+                            log(`✗ Final job ${jobId.substring(0, 8)}... failed: ${data.error}`);
+                            reject(new Error('Processing failed: ' + data.error));
+                        } else if (attempts >= maxAttempts) {
+                            log(`⏱ Final job ${jobId.substring(0, 8)}... timed out`);
+                            reject(new Error('Processing timed out'));
+                        } else {
+                            if (attempts % 5 === 0) {
+                                log(`⏳ Processing final chunk... (${attempts}s)`);
+                            }
+                            setTimeout(checkStatus, 1000);
+                        }
+                    } catch (error) {
+                        log('✗ Error checking final job status: ' + error.message);
+                        reject(error);
+                    }
+                };
+
+                checkStatus();
+            });
+        }
+
+        async function pollJobStatus(jobId, originalMode) {
+            const maxAttempts = 180;
+            let attempts = 0;
+            let completed = false;
+
+            const pollInterval = setInterval(async () => {
+                if (completed) return;
+
+                attempts++;
+
+                try {
+                    const response = await fetch(`${serverUrl}/job_status/${jobId}`);
+
+                    if (!response.ok) {
+                        throw new Error('Failed to get job status');
+                    }
+
+                    const data = await response.json();
+
+                    if (completed) return;
+
+                    if (data.status === 'completed') {
+                        completed = true;
+                        clearInterval(pollInterval);
+                        log(`✓ Job ${jobId.substring(0, 8)}... completed!`);
+                        displayResult(data, originalMode);
+                    } else if (data.status === 'error') {
+                        completed = true;
+                        clearInterval(pollInterval);
+                        log(`✗ Job ${jobId.substring(0, 8)}... failed: ${data.error}`);
+                        alert('Processing failed: ' + data.error);
+                    } else if (attempts >= maxAttempts) {
+                        completed = true;
+                        clearInterval(pollInterval);
+                        log(`⏱ Job ${jobId.substring(0, 8)}... timed out`);
+                        alert('Processing timed out. Please try again.');
+                    } else if (attempts % 5 === 0) {
+                        log(`⏳ Processing... (${attempts}s)`);
+                    }
+                } catch (error) {
+                    if (!completed) {
+                        completed = true;
+                        clearInterval(pollInterval);
+                        log('✗ Error polling job status: ' + error.message);
+                    }
+                }
+            }, 1000);
+        }
+
+        function displayResult(jobData, originalMode) {
+            document.getElementById('resultsSection').style.display = 'block';
+            const resultsContainer = document.getElementById('results');
+
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'result-item';
+
+            const header = document.createElement('div');
+            header.className = 'result-header';
+
+            const title = document.createElement('h3');
+            // Set the title based on mode and length
+            if (originalMode === 'Summary' && jobData.summary_length) {
+                title.textContent = `Summary (${jobData.summary_length})`;
+            } else if (originalMode === 'GLOBAL SUMMARY') {
+                title.textContent = 'Global Summary';
+            } else if (originalMode === 'Action Points') {
+                title.textContent = 'Action Points';
+            } else {
+                title.textContent = originalMode;
+            }
+
+            // No badge needed anymore - just add the title
+            header.appendChild(title);
+
+            const content = document.createElement('div');
+            content.className = 'result-content';
+
+            const cleanText = jobData.result
+                .replace(/\[SUMMARY[^\]]*\]\s*/g, '')
+                .replace(/\[ACTION POINTS\]\s*/g, '')
+                .replace(/\[GLOBAL SUMMARY\]\s*/g, '')
+                .trim();
+
+            content.innerHTML = formatTextToHTML(cleanText);
+
+            resultDiv.appendChild(header);
+            resultDiv.appendChild(content);
+
+            resultsContainer.insertBefore(resultDiv, resultsContainer.firstChild);
+
+            allResults.push({
+                mode: originalMode,
+                result: jobData.result,
+                timestamp: new Date().toISOString()
+            });
+
+            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function formatTextToHTML(text) {
+            text = text
+                .replace(/\*\*\*/g, '')
+                .replace(/\*\*/g, '')
+                .replace(/\*/g, '')
+                .replace(/__|__/g, '')
+                .replace(/\#\#\#/g, '')
+                .replace(/\#\#/g, '')
+                .replace(/\#/g, '')
+                .replace(/~~(.+?)~~/g, '$1');
+
+            let html = '';
+            const lines = text.split('\n');
+            let inParagraph = false;
+            let inOrderedList = false;
+            let inUnorderedList = false;
+            let currentListNumber = 1;
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+
+                if (line === '') {
+                    if (inParagraph) {
+                        html += '</p>';
+                        inParagraph = false;
+                    }
+                    if (inOrderedList) {
+                        html += '</ol>';
+                        inOrderedList = false;
+                        currentListNumber = 1;
+                    }
+                    if (inUnorderedList) {
+                        html += '</ul>';
+                        inUnorderedList = false;
+                    }
+                    continue;
+                }
+
+                // Check for ➤ symbol (action points)
+                const actionMatch = line.match(/^➤\s*(.+)/);
+                if (actionMatch) {
+                    if (inParagraph) {
+                        html += '</p>';
+                        inParagraph = false;
+                    }
+                    if (inOrderedList) {
+                        html += '</ol>';
+                        inOrderedList = false;
+                        currentListNumber = 1;
+                    }
+                    if (inUnorderedList) {
+                        html += '</ul>';
+                        inUnorderedList = false;
+                    }
+                    html += `<div class="action-item">${actionMatch[1]}</div>`;
+                    continue;
+                }
+
+                const numberedMatch = line.match(/^(\d+)[\.\)]\s+(.+)/);
+                if (numberedMatch) {
+                    if (inParagraph) {
+                        html += '</p>';
+                        inParagraph = false;
+                    }
+                    if (inUnorderedList) {
+                        html += '</ul>';
+                        inUnorderedList = false;
+                    }
+                    if (!inOrderedList) {
+                        html += '<ol>';
+                        inOrderedList = true;
+                        currentListNumber = 1;
+                    }
+                    html += `<li>${numberedMatch[2]}</li>`;
+                    currentListNumber++;
+                    continue;
+                }
+
+                const bulletMatch = line.match(/^[-•]\s+(.+)/);
+                if (bulletMatch) {
+                    if (inParagraph) {
+                        html += '</p>';
+                        inParagraph = false;
+                    }
+                    if (inOrderedList) {
+                        html += '</ol>';
+                        inOrderedList = false;
+                        currentListNumber = 1;
+                    }
+                    if (!inUnorderedList) {
+                        html += '<ul>';
+                        inUnorderedList = true;
+                    }
+                    html += `<li>${bulletMatch[1]}</li>`;
+                    continue;
+                }
+
+                if (line.match(/^[A-Z\s]{4,}:?\s*$/)) {
+                    if (inParagraph) {
+                        html += '</p>';
+                        inParagraph = false;
+                    }
+                    if (inOrderedList) {
+                        html += '</ol>';
+                        inOrderedList = false;
+                        currentListNumber = 1;
+                    }
+                    if (inUnorderedList) {
+                        html += '</ul>';
+                        inUnorderedList = false;
+                    }
+                    html += `<h4>${line.replace(/:+$/, '')}</h4>`;
+                    continue;
+                }
+
+                if (inOrderedList) {
+                    html += '</ol>';
+                    inOrderedList = false;
+                    currentListNumber = 1;
+                }
+                if (inUnorderedList) {
+                    html += '</ul>';
+                    inUnorderedList = false;
+                }
+
+                if (!inParagraph) {
+                    html += '<p>';
+                    inParagraph = true;
+                } else {
+                    html += ' ';
+                }
+                html += line;
+            }
+
+            if (inParagraph) {
+                html += '</p>';
+            }
+            if (inOrderedList) {
+                html += '</ol>';
+            }
+            if (inUnorderedList) {
+                html += '</ul>';
+            }
+
+            return html;
+        }
+
+        async function genGlobalSummary() {
+            if (allResults.length === 0) {
+                log('⚠️ No results available for global summary');
+                alert('No results available. Please process some audio first.');
+                return;
+            }
+
+            log('⏳ Generating global summary...');
+
+            try {
+                const texts = allResults.map(r => r.result);
+
+                const response = await fetch(`${serverUrl}/global_summary`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ texts: texts })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to generate global summary');
+                }
+
+                const data = await response.json();
+
+                displayResult({
+                    mode: 'GLOBAL SUMMARY',
+                    result: data.global_summary,
+                    summary_length: ''
+                }, 'GLOBAL SUMMARY');
+
+                log('✓ Global summary generated successfully!');
+
+            } catch (error) {
+                log('✗ Error generating global summary: ' + error.message);
+                alert('Error generating global summary: ' + error.message);
+            }
+        }
+
+        async function saveResults() {
+            if (allResults.length === 0) {
+                log('⚠️ No results to save');
+                alert('No results to save. Please process some audio first.');
+                return;
+            }
+
+            log('💾 Preparing results for download...');
+
+            try {
+                const meetingDate = document.getElementById('date').value || 'Not specified';
+                const meetingTime = document.getElementById('time').value || 'Not specified';
+                const venue = document.getElementById('venue').value || 'Not specified';
+                const agenda = document.getElementById('agenda').value || 'Not specified';
+                const context = document.getElementById('context').value || 'None';
+
+                // Create HTML content for Word document
+                let htmlContent = `
+                    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                    <head>
+                        <meta charset='utf-8'>
+                        <title>Meeting Minutes</title>
+                        <style>
+                            body { 
+                                font-family: Calibri, Arial, sans-serif; 
+                                font-size: 11pt; 
+                                line-height: 1.6;
+                                margin: 1in;
+                            }
+                            h1 { 
+                                text-align: center; 
+                                color: #2E5090; 
+                                font-size: 24pt; 
+                                margin-bottom: 20pt;
+                                border-bottom: 3pt solid #2E5090;
+                                padding-bottom: 10pt;
+                            }
+                            h2 { 
+                                color: #2E5090; 
+                                font-size: 16pt; 
+                                margin-top: 20pt;
+                                margin-bottom: 10pt;
+                                border-bottom: 2pt solid #D0D0D0;
+                                padding-bottom: 5pt;
+                            }
+                            h3 { 
+                                color: #4472C4; 
+                                font-size: 14pt; 
+                                margin-top: 15pt;
+                                margin-bottom: 8pt;
+                            }
+                            h4 { 
+                                color: #5B9BD5; 
+                                font-size: 12pt; 
+                                margin-top: 12pt;
+                                margin-bottom: 6pt;
+                            }
+                            p { 
+                                margin: 8pt 0; 
+                                text-align: justify;
+                            }
+                            ul, ol { 
+                                margin: 10pt 0; 
+                                padding-left: 30pt;
+                            }
+                            li { 
+                                margin: 6pt 0; 
+                            }
+                            .action-item {
+                                margin: 6pt 0;
+                                padding-left: 20pt;
+                            }
+                            .action-item::before {
+                                content: '➤ ';
+                                color: #2E5090;
+                                font-weight: bold;
+                                margin-left: -20pt;
+                                margin-right: 8pt;
+                            }
+                            .info-table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                margin-bottom: 20pt;
+                            }
+                            .info-table td {
+                                padding: 8pt;
+                                border: 1pt solid #D0D0D0;
+                            }
+                            .info-label {
+                                font-weight: bold;
+                                background-color: #F2F2F2;
+                                width: 25%;
+                            }
+                            .result-section {
+                                margin-top: 20pt;
+                                padding: 15pt;
+                                border: 2pt solid #D0D0D0;
+                                border-radius: 5pt;
+                                background-color: #FAFAFA;
+                                page-break-inside: avoid;
+                            }
+                            .badge {
+                                background-color: #2E5090;
+                                color: white;
+                                padding: 4pt 12pt;
+                                border-radius: 10pt;
+                                font-size: 9pt;
+                                font-weight: bold;
+                            }
+                            .footer {
+                                margin-top: 30pt;
+                                padding-top: 15pt;
+                                border-top: 2pt solid #D0D0D0;
+                                font-size: 9pt;
+                                color: #666666;
+                                text-align: center;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>MEETING MINUTES</h1>
+                        
+                        <h2>Meeting Information</h2>
+                        <table class="info-table">
+                            <tr>
+                                <td class="info-label">Date</td>
+                                <td>${meetingDate}</td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Time</td>
+                                <td>${meetingTime}</td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Venue</td>
+                                <td>${venue}</td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Agenda</td>
+                                <td>${agenda}</td>
+                            </tr>
+                `;
+
+                if (context && context !== 'None') {
+                    htmlContent += `
+                            <tr>
+                                <td class="info-label">Additional Context</td>
+                                <td>${context}</td>
+                            </tr>
+                    `;
+                }
+
+                htmlContent += `
+                        </table>
+                        
+                        <h2>Results</h2>
+                `;
+
+                allResults.forEach((result, index) => {
+                    const cleanText = result.result
+                        .replace(/\[SUMMARY[^\]]*\]\s*/g, '')
+                        .replace(/\[ACTION POINTS\]\s*/g, '')
+                        .replace(/\[GLOBAL SUMMARY\]\s*/g, '')
+                        .trim();
+
+                    const formattedContent = formatTextToHTML(cleanText);
+                    
+                    htmlContent += `
+                        <div class="result-section">
+                            <h3>${index + 1}. ${result.mode.toUpperCase()} <span class="badge">${result.mode}</span></h3>
+                            ${formattedContent}
+                        </div>
+                    `;
+                });
+
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                htmlContent += `
+                        <div class="footer">
+                            <p>Generated on: ${new Date().toLocaleString()}</p>
+                            <p>Document: meeting_minutes_${timestamp}.doc</p>
+                        </div>
+                    </body>
+                    </html>
+                `;
+
+                // Create blob with proper Word MIME type
+                const blob = new Blob(['\ufeff', htmlContent], { 
+                    type: 'application/msword' 
+                });
+                
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `meeting_minutes_${timestamp}.doc`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                log(`✓ Results saved: meeting_minutes_${timestamp}.doc`);
+                alert('Results saved successfully as Word document!');
+
+            } catch (error) {
+                log('✗ Error saving results: ' + error.message);
+                alert('Error saving results: ' + error.message);
+            }
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if (!isPaused) {
+                    const elapsed = Math.floor((Date.now() - startTime - pausedTime) / 1000);
+                    const hours = Math.floor(elapsed / 3600);
+                    const minutes = Math.floor((elapsed % 3600) / 60);
+                    const seconds = elapsed % 60;
+
+                    document.getElementById('timer').textContent =
+                        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function log(message) {
+            const statusBox = document.getElementById('status');
+            const p = document.createElement('p');
+            const timestamp = new Date().toLocaleTimeString();
+            p.textContent = `[${timestamp}] ${message}`;
+            statusBox.appendChild(p);
+            statusBox.scrollTop = statusBox.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function encodeWAV(samples, inputSampleRate, outputSampleRate) {
+            let resampledData;
+            if (inputSampleRate !== outputSampleRate) {
+                const ratio = inputSampleRate / outputSampleRate;
+                const newLength = Math.round(samples.length / ratio);
+                resampledData = new Float32Array(newLength);
+
+                for (let i = 0; i < newLength; i++) {
+                    const srcIndex = i * ratio;
+                    const srcIndexFloor = Math.floor(srcIndex);
+                    const srcIndexCeil = Math.min(srcIndexFloor + 1, samples.length - 1);
+                    const t = srcIndex - srcIndexFloor;
+                    resampledData[i] = samples[srcIndexFloor] * (1 - t) + samples[srcIndexCeil] * t;
+                }
+            } else {
+                resampledData = samples;
+            }
+
+            const buffer = new ArrayBuffer(44 + resampledData.length * 2);
+            const view = new DataView(buffer);
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + resampledData.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, outputSampleRate, true);
+            view.setUint32(28, outputSampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, resampledData.length * 2, true);
+
+            floatTo16BitPCM(view, 44, resampledData);
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        function floatTo16BitPCM(view, offset, input) {
+            for (let i = 0; i < input.length; i++, offset += 2) {
+                const s = Math.max(-1, Math.min(1, input[i]));
+                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+        }
+    </script>
+</body>
+</html>
