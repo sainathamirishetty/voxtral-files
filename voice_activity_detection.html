@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dictation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .back-btn {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .back-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+        .content { padding: 30px; }
+        .section {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        button {
+            padding: 12px 25px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .recording-indicator {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ffc107;
+        }
+        .recording-indicator.active { display: flex; }
+        .pulse {
+            width: 12px;
+            height: 12px;
+            background: #dc3545;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        .timer {
+            font-weight: 600;
+            color: #dc3545;
+            font-size: 1.1em;
+        }
+        .button-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .transcription-box {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+            font-size: 15px;
+            line-height: 1.8;
+            color: #333;
+        }
+        .transcription-box.empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="goBack()">← Back</button>
+            <h1>🎤 Dictation Generator</h1>
+        </div>
+
+        <div class="content">
+            <!-- Recording Controls -->
+            <div class="section">
+                <h2>🎤 Recording Controls</h2>
+                <div class="recording-indicator" id="recIndicator">
+                    <div class="pulse"></div>
+                    <span>Recording in progress...</span>
+                    <span class="timer" id="timer">00:00:00</span>
+                </div>
+
+                <div class="button-row">
+                    <button class="btn-primary" id="startBtn" onclick="startRec()">Start Recording</button>
+                    <button class="btn-warning" id="pauseBtn" onclick="pauseRec()" disabled>Pause</button>
+                    <button class="btn-danger" id="stopBtn" onclick="endRecording()" disabled>End Recording</button>
+                </div>
+
+                <div class="button-row" style="margin-top: 10px;">
+                    <button class="btn-success" onclick="saveAsDoc()">Save as DOC</button>
+                </div>
+            </div>
+
+            <!-- Transcription Display -->
+            <div class="section">
+                <h2>📄 Dictation</h2>
+                <div class="transcription-box empty" id="transcriptionBox">
+                    Start recording to see Dictation...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder = null;
+        let isRecording = false;
+        let isPaused = false;
+        let startTime = null;
+        let timerInterval = null;
+        let pausedTime = 0;
+        let pauseStartTime = null;
+        let serverUrl = 'http://127.0.0.1:8000';
+        let transcriptionText = '';
+        let audioContext = null;
+        let scriptProcessor = null;
+        let audioInput = null;
+        let bufferData = [];
+        let mediaStreamRef = null;
+        let autoChunkInterval = null;
+        let lastChunkTime = null;
+        let chunkCounter = 0;
+        let meetingStartTime = null;
+
+        function goBack() {
+            window.location.href = '/';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkServerSilently();
+        });
+
+        async function checkServerSilently() {
+            try {
+                const response = await fetch(`${serverUrl}/health`);
+                const data = await response.json();
+            } catch (error) {
+                // Silent check
+            }
+        }
+
+        async function startRec() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+                mediaStreamRef = stream;
+
+                isRecording = false;
+                isPaused = false;
+                startTime = null;
+                pausedTime = 0;
+                pauseStartTime = null;
+                bufferData = [];
+                transcriptionText = '';
+                chunkCounter = 0;
+                meetingStartTime = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+                const audioTrack = stream.getAudioTracks()[0];
+                const settings = audioTrack.getSettings();
+                const micSampleRate = settings.sampleRate || 48000;
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                audioInput = audioContext.createMediaStreamSource(stream);
+
+                const bufferSize = 4096;
+                scriptProcessor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+
+                scriptProcessor.onaudioprocess = function(e) {
+                    if (!isPaused && isRecording) {
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        const buffer = new Float32Array(inputData);
+                        bufferData.push(buffer);
+                    }
+                };
+
+                audioInput.connect(scriptProcessor);
+                scriptProcessor.connect(audioContext.destination);
+
+                isRecording = true;
+                isPaused = false;
+                startTime = Date.now();
+                lastChunkTime = Date.now();
+                pausedTime = 0;
+
+                startTimer();
+                startAutoChunking();
+
+                document.getElementById('recIndicator').classList.add('active');
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('pauseBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = false;
+
+                const transcriptionBox = document.getElementById('transcriptionBox');
+                transcriptionBox.classList.remove('empty');
+                transcriptionBox.textContent = '';
+
+            } catch (error) {
+                alert('Error accessing microphone: ' + error.message);
+            }
+        }
+
+        function startAutoChunking() {
+            stopAutoChunking();
+            autoChunkInterval = setInterval(() => {
+                if (isRecording && !isPaused) {
+                    processCurrentChunk();
+                    lastChunkTime = Date.now();
+                }
+            }, 5000);
+        }
+
+        function stopAutoChunking() {
+            if (autoChunkInterval) {
+                clearInterval(autoChunkInterval);
+                autoChunkInterval = null;
+            }
+        }
+
+        function pauseRec() {
+            if (!isRecording) return;
+
+            if (isPaused) {
+                isPaused = false;
+                if (pauseStartTime) {
+                    pausedTime += (Date.now() - pauseStartTime);
+                    pauseStartTime = null;
+                }
+                document.getElementById('pauseBtn').textContent = 'Pause';
+            } else {
+                isPaused = true;
+                pauseStartTime = Date.now();
+                document.getElementById('pauseBtn').textContent = 'Resume';
+            }
+        }
+
+        async function processCurrentChunk() {
+            if (bufferData.length === 0) return;
+
+            const chunksToProcess = [...bufferData];
+            bufferData = [];
+
+            let totalLength = 0;
+            for (const chunk of chunksToProcess) totalLength += chunk.length;
+
+            const mergedData = new Float32Array(totalLength);
+            let offset = 0;
+            for (const chunk of chunksToProcess) {
+                mergedData.set(chunk, offset);
+                offset += chunk.length;
+            }
+
+            // Simple RMS check to filter pure silence
+            let sumSquares = 0;
+            for (let i = 0; i < mergedData.length; i++) {
+                sumSquares += mergedData[i] * mergedData[i];
+            }
+            const rms = Math.sqrt(sumSquares / mergedData.length);
+
+            // If there's any audio volume, send it (no extraction to avoid duplication)
+            if (rms > 0.001) {
+                const wavBlob = encodeWAV(mergedData, audioContext.sampleRate, 16000);
+                await sendAudioToServer(wavBlob);
+            }
+        }
+
+        async function sendAudioToServer(audioBlob) {
+            const formData = new FormData();
+            const filename = `chunk_${Date.now()}.wav`;
+
+            formData.append('file', audioBlob, filename);
+            formData.append('mode', 'Transcription');
+
+            try {
+                const response = await fetch(`${serverUrl}/process_audio`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Server request failed');
+                }
+
+                const data = await response.json();
+                pollJobStatus(data.job_id);
+
+            } catch (error) {
+                // Silent error handling
+            }
+        }
+
+        async function pollJobStatus(jobId) {
+            const maxAttempts = 180;
+            let attempts = 0;
+            let completed = false;
+
+            const pollInterval = setInterval(async () => {
+                if (completed) return;
+                attempts++;
+
+                try {
+                    const response = await fetch(`${serverUrl}/job_status/${jobId}`);
+                    if (!response.ok) throw new Error('Failed to get job status');
+
+                    const data = await response.json();
+
+                    if (completed) return;
+
+                    if (data.status === 'completed') {
+                        completed = true;
+                        clearInterval(pollInterval);
+                        displayTranscription(data.result);
+                    } else if (data.status === 'error' || attempts >= maxAttempts) {
+                        completed = true;
+                        clearInterval(pollInterval);
+                    }
+                } catch (error) {
+                    if (!completed) {
+                        completed = true;
+                        clearInterval(pollInterval);
+                    }
+                }
+            }, 1000);
+        }
+
+        function displayTranscription(result) {
+            const cleanText = result.replace(/\[TRANSCRIPTION\]\s*/g, '').trim();
+            transcriptionText += (transcriptionText ? ' ' : '') + cleanText;
+
+            const transcriptionBox = document.getElementById('transcriptionBox');
+            transcriptionBox.textContent = transcriptionText;
+            transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+        }
+
+        async function endRecording() {
+            if (!isRecording) return;
+
+            document.getElementById('stopBtn').disabled = true;
+
+            stopTimer();
+            stopAutoChunking();
+
+            isRecording = false;
+            isPaused = false;
+
+            try {
+                if (bufferData.length > 0) {
+                    await processCurrentChunkAndWait();
+                }
+            } catch (err) {
+                // Silent error handling
+            }
+
+            try {
+                if (scriptProcessor) {
+                    scriptProcessor.onaudioprocess = null;
+                    try { scriptProcessor.disconnect(); } catch(e){}
+                    scriptProcessor = null;
+                }
+
+                if (audioInput) {
+                    try { audioInput.disconnect(); } catch(e){}
+                    audioInput = null;
+                }
+
+                if (mediaStreamRef) {
+                    try {
+                        mediaStreamRef.getTracks().forEach(track => {
+                            try { track.stop(); } catch(e){}
+                        });
+                    } catch (e) {}
+                    mediaStreamRef = null;
+                }
+
+                if (audioContext && audioContext.state !== 'closed') {
+                    try {
+                        await audioContext.close();
+                        audioContext = null;
+                    } catch (e) {}
+                }
+            } catch (error) {
+                // Silent error handling
+            }
+
+            document.getElementById('recIndicator').classList.remove('active');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('pauseBtn').textContent = 'Pause';
+            document.getElementById('timer').textContent = '00:00:00';
+
+            bufferData = [];
+            isPaused = false;
+            pausedTime = 0;
+            pauseStartTime = null;
+            startTime = null;
+            lastChunkTime = null;
+        }
+
+        async function processCurrentChunkAndWait() {
+            if (bufferData.length === 0) return;
+
+            const chunksToProcess = [...bufferData];
+            bufferData = [];
+
+            let totalLength = 0;
+            for (const chunk of chunksToProcess) {
+                totalLength += chunk.length;
+            }
+
+            const mergedData = new Float32Array(totalLength);
+            let offset = 0;
+            for (const chunk of chunksToProcess) {
+                mergedData.set(chunk, offset);
+                offset += chunk.length;
+            }
+
+            // Calculate RMS
+            let sumSquares = 0;
+            for (let i = 0; i < mergedData.length; i++) {
+                sumSquares += mergedData[i] * mergedData[i];
+            }
+            const rms = Math.sqrt(sumSquares / mergedData.length);
+
+            // If there's any audio energy, send it
+            if (rms > 0.001) {
+                const wavBlob = encodeWAV(mergedData, audioContext.sampleRate, 16000);
+                chunkCounter++;
+                await sendAudioToServerAndWait(wavBlob);
+            }
+        }
+
+        async function sendAudioToServerAndWait(audioBlob) {
+            const formData = new FormData();
+            const filename = `chunk_${Date.now()}.wav`;
+
+            formData.append('file', audioBlob, filename);
+            formData.append('mode', 'Transcription');
+
+            try {
+                const response = await fetch(`${serverUrl}/process_audio`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Server request failed');
+                }
+
+                const data = await response.json();
+                await waitForJobCompletion(data.job_id);
+
+            } catch (error) {
+                // Silent error handling
+            }
+        }
+
+        async function waitForJobCompletion(jobId) {
+            return new Promise(async (resolve, reject) => {
+                const maxAttempts = 180;
+                let attempts = 0;
+
+                const checkStatus = async () => {
+                    attempts++;
+
+                    try {
+                        const response = await fetch(`${serverUrl}/job_status/${jobId}`);
+
+                        if (!response.ok) {
+                            throw new Error('Failed to get job status');
+                        }
+
+                        const data = await response.json();
+
+                        if (data.status === 'completed') {
+                            displayTranscription(data.result);
+                            resolve();
+                        } else if (data.status === 'error') {
+                            reject(new Error('Processing failed: ' + data.error));
+                        } else if (attempts >= maxAttempts) {
+                            reject(new Error('Processing timed out'));
+                        } else {
+                            setTimeout(checkStatus, 1000);
+                        }
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+
+                checkStatus();
+            });
+        }
+
+        function saveAsDoc() {
+            if (!transcriptionText) {
+                alert('No transcription to save. Please record something first.');
+                return;
+            }
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+            const htmlContent = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>Transcription</title>
+                    <style>
+                        body { font-family: Calibri, sans-serif; font-size: 11pt; line-height: 1.5; }
+                        h1 { font-size: 16pt; font-weight: bold; margin-bottom: 10pt; }
+                        .header { text-align: center; border-bottom: 2pt solid #000; padding-bottom: 10pt; margin-bottom: 20pt; }
+                        .content { text-align: justify; margin-bottom: 20pt; }
+                        .footer { border-top: 1pt solid #000; padding-top: 10pt; font-size: 9pt; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class='header'>
+                        <h1>TRANSCRIPTION</h1>
+                    </div>
+                    <div class='content'>
+                        <p>${transcriptionText.replace(/\n/g, '</p><p>')}</p>
+                    </div>
+                    <div class='footer'>
+                        <p>Generated on: ${new Date().toLocaleString()}</p>
+                        <p>File: transcription_${timestamp}.doc</p>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob(['\ufeff', htmlContent], {
+                type: 'application/msword'
+            });
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `transcription_${timestamp}.doc`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if (!isPaused) {
+                    const elapsed = Math.floor((Date.now() - startTime - pausedTime) / 1000);
+                    const hours = Math.floor(elapsed / 3600);
+                    const minutes = Math.floor((elapsed % 3600) / 60);
+                    const seconds = elapsed % 60;
+
+                    document.getElementById('timer').textContent =
+                        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function encodeWAV(samples, inputSampleRate, outputSampleRate) {
+            let resampledData;
+            if (inputSampleRate !== outputSampleRate) {
+                const ratio = inputSampleRate / outputSampleRate;
+                const newLength = Math.round(samples.length / ratio);
+                resampledData = new Float32Array(newLength);
+
+                for (let i = 0; i < newLength; i++) {
+                    const srcIndex = i * ratio;
+                    const srcIndexFloor = Math.floor(srcIndex);
+                    const srcIndexCeil = Math.min(srcIndexFloor + 1, samples.length - 1);
+                    const t = srcIndex - srcIndexFloor;
+                    resampledData[i] = samples[srcIndexFloor] * (1 - t) + samples[srcIndexCeil] * t;
+                }
+            } else {
+                resampledData = samples;
+            }
+
+            const buffer = new ArrayBuffer(44 + resampledData.length * 2);
+            const view = new DataView(buffer);
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + resampledData.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, outputSampleRate, true);
+            view.setUint32(28, outputSampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, resampledData.length * 2, true);
+
+            floatTo16BitPCM(view, 44, resampledData);
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        function floatTo16BitPCM(view, offset, input) {
+            for (let i = 0; i < input.length; i++, offset += 2) {
+                const s = Math.max(-1, Math.min(1, input[i]));
+                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+        }
+    </script>
+</body>
+</html>
